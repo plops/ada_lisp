@@ -24,12 +24,10 @@ package Lisp.Store with SPARK_Mode is
      Pre => Is_Valid_Ref (S, Ref) and then Kind_Of (S, Ref) = Lisp.Types.Symbol_Cell;
    function Car (S : Arena; Ref : Lisp.Types.Cell_Ref) return Lisp.Types.Cell_Ref
    with
-     Pre  => Is_Valid_Ref (S, Ref) and then Kind_Of (S, Ref) = Lisp.Types.Cons_Cell,
-     Post => Car'Result = Lisp.Types.No_Ref or else Is_Valid_Ref (S, Car'Result);
+     Pre => Is_Valid_Ref (S, Ref) and then Kind_Of (S, Ref) = Lisp.Types.Cons_Cell;
    function Cdr (S : Arena; Ref : Lisp.Types.Cell_Ref) return Lisp.Types.Cell_Ref
    with
-     Pre  => Is_Valid_Ref (S, Ref) and then Kind_Of (S, Ref) = Lisp.Types.Cons_Cell,
-     Post => Cdr'Result = Lisp.Types.No_Ref or else Is_Valid_Ref (S, Cdr'Result);
+     Pre => Is_Valid_Ref (S, Ref) and then Kind_Of (S, Ref) = Lisp.Types.Cons_Cell;
    function Primitive_Value (S : Arena; Ref : Lisp.Types.Cell_Ref) return Lisp.Types.Primitive_Kind
    with
      Pre => Is_Valid_Ref (S, Ref) and then Kind_Of (S, Ref) = Lisp.Types.Primitive_Cell;

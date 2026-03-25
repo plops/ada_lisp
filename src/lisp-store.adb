@@ -13,7 +13,7 @@ package body Lisp.Store with SPARK_Mode is
        and then New_S.Next_Free = New_Ref + 1
        and then New_S.Cells (1).Kind = Lisp.Types.Nil_Cell
        and then New_S.Cells (2).Kind = Lisp.Types.True_Cell
-       and then (for all I in 3 .. New_Ref - 1 => Cell_Refs_Below (New_S, I))
+       and then (for all I in 3 .. New_Ref - 1 => New_S.Cells (I) = Old_S.Cells (I))
        and then Cell_Refs_Below (New_S, New_Ref),
      Post => Valid (New_S);
 
@@ -22,7 +22,19 @@ package body Lisp.Store with SPARK_Mode is
       New_S   : in Arena;
       New_Ref : in Positive) is
    begin
-      null;
+      pragma Assert (New_S.Next_Free in 3 .. Lisp.Config.Max_Cells + 1);
+      pragma Assert (New_S.Cells (1).Kind = Lisp.Types.Nil_Cell);
+      pragma Assert (New_S.Cells (2).Kind = Lisp.Types.True_Cell);
+      pragma Assert (Cell_Refs_Below (New_S, New_Ref));
+      for I in 3 .. New_Ref - 1 loop
+         pragma Loop_Invariant (I in 3 .. New_Ref);
+         pragma Loop_Invariant
+           ((for all J in 3 .. I - 1 => Cell_Refs_Below (New_S, J)));
+         pragma Assert (Cell_Refs_Below (Old_S, I));
+         pragma Assert (New_S.Cells (I) = Old_S.Cells (I));
+         pragma Assert (Cell_Refs_Below (New_S, I));
+      end loop;
+      pragma Assert (Valid (New_S));
    end Prove_Append_Preserves_Valid;
 
    procedure Initialize (S : out Arena) is
@@ -57,7 +69,6 @@ package body Lisp.Store with SPARK_Mode is
    begin
       case S.Cells (Positive (Ref)).Kind is
          when Lisp.Types.Cons_Cell =>
-            pragma Assert (Cell_Refs_Below (S, Positive (Ref)));
             return S.Cells (Positive (Ref)).Left_Value;
          when others =>
             return Lisp.Types.No_Ref;
@@ -68,7 +79,6 @@ package body Lisp.Store with SPARK_Mode is
    begin
       case S.Cells (Positive (Ref)).Kind is
          when Lisp.Types.Cons_Cell =>
-            pragma Assert (Cell_Refs_Below (S, Positive (Ref)));
             return S.Cells (Positive (Ref)).Right_Value;
          when others =>
             return Lisp.Types.No_Ref;
@@ -176,7 +186,7 @@ package body Lisp.Store with SPARK_Mode is
       Ref := S.Next_Free;
       S.Cells (Positive (Ref)) := (Kind => Lisp.Types.Integer_Cell, Int_Value => Value);
       S.Next_Free := Ref + 1;
-      pragma Assert ((for all I in 3 .. Ref - 1 => Cell_Refs_Below (S, I)));
+      pragma Assert ((for all I in 3 .. Ref - 1 => S.Cells (I) = Old_S.Cells (I)));
       Prove_Append_Preserves_Valid (Old_S, S, Positive (Ref));
       Error := Lisp.Types.Error_None;
    end Make_Integer;
@@ -197,7 +207,7 @@ package body Lisp.Store with SPARK_Mode is
       Ref := S.Next_Free;
       S.Cells (Positive (Ref)) := (Kind => Lisp.Types.Symbol_Cell, Sym_Value => Value);
       S.Next_Free := Ref + 1;
-      pragma Assert ((for all I in 3 .. Ref - 1 => Cell_Refs_Below (S, I)));
+      pragma Assert ((for all I in 3 .. Ref - 1 => S.Cells (I) = Old_S.Cells (I)));
       Prove_Append_Preserves_Valid (Old_S, S, Positive (Ref));
       Error := Lisp.Types.Error_None;
    end Make_Symbol;
@@ -229,7 +239,7 @@ package body Lisp.Store with SPARK_Mode is
       S.Cells (Positive (Ref)) :=
         (Kind => Lisp.Types.Cons_Cell, Left_Value => Left, Right_Value => Right);
       S.Next_Free := Ref + 1;
-      pragma Assert ((for all I in 3 .. Ref - 1 => Cell_Refs_Below (S, I)));
+      pragma Assert ((for all I in 3 .. Ref - 1 => S.Cells (I) = Old_S.Cells (I)));
       pragma Assert (Cell_Refs_Below (S, Positive (Ref)));
       Prove_Append_Preserves_Valid (Old_S, S, Positive (Ref));
       Error := Lisp.Types.Error_None;
@@ -251,7 +261,7 @@ package body Lisp.Store with SPARK_Mode is
       Ref := S.Next_Free;
       S.Cells (Positive (Ref)) := (Kind => Lisp.Types.Primitive_Cell, Prim_Value => Prim);
       S.Next_Free := Ref + 1;
-      pragma Assert ((for all I in 3 .. Ref - 1 => Cell_Refs_Below (S, I)));
+      pragma Assert ((for all I in 3 .. Ref - 1 => S.Cells (I) = Old_S.Cells (I)));
       Prove_Append_Preserves_Valid (Old_S, S, Positive (Ref));
       Error := Lisp.Types.Error_None;
    end Make_Primitive;
@@ -289,7 +299,7 @@ package body Lisp.Store with SPARK_Mode is
       S.Next_Free := Ref + 1;
       pragma Assert (Params = Lisp.Types.No_Ref or else Params < Ref);
       pragma Assert (Body_Expr = Lisp.Types.No_Ref or else Body_Expr < Ref);
-      pragma Assert ((for all I in 3 .. Ref - 1 => Cell_Refs_Below (S, I)));
+      pragma Assert ((for all I in 3 .. Ref - 1 => S.Cells (I) = Old_S.Cells (I)));
       pragma Assert (Cell_Refs_Below (S, Positive (Ref)));
       Prove_Append_Preserves_Valid (Old_S, S, Positive (Ref));
       Error := Lisp.Types.Error_None;
