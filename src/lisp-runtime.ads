@@ -30,7 +30,14 @@ package Lisp.Runtime with SPARK_Mode is
       Known   : Well_Known_Symbols;
    end record;
 
-   procedure Initialize (RT : in out State; Error : out Lisp.Types.Error_Code);
-   function Valid (RT : State) return Boolean;
+   procedure Initialize (RT : in out State; Error : out Lisp.Types.Error_Code)
+   with
+     Post => (if Lisp.Types."=" (Error, Lisp.Types.Error_None) then Valid (RT));
+
+   function Valid (RT : State) return Boolean is
+     (Lisp.Symbols.Valid (RT.Symbols)
+      and then Lisp.Store.Valid (RT.Store)
+      and then Lisp.Env.Valid (RT.Env));
+
    function Is_Reserved (RT : State; Name : Lisp.Types.Symbol_Id) return Boolean;
 end Lisp.Runtime;

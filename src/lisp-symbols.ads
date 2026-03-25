@@ -16,7 +16,10 @@ package Lisp.Symbols with SPARK_Mode is
       Id     : out Lisp.Types.Symbol_Id;
       Error  : out Lisp.Types.Error_Code)
    with
-     Pre  => Valid (T),
+     Pre  => Valid (T)
+       and then Source'First = 1
+       and then First in Source'Range
+       and then Last in First .. Source'Last,
      Post => Valid (T);
 
    procedure Lookup_Image
@@ -34,7 +37,10 @@ package Lisp.Symbols with SPARK_Mode is
       First  : Positive;
       Last   : Natural) return Boolean
    with
-     Pre => Valid (T);
+     Pre => Valid (T)
+       and then Source'First = 1
+       and then First in Source'Range
+       and then Last in First .. Source'Last;
 
 private
    subtype Char_Index is Positive range 1 .. Lisp.Config.Max_Symbol_Length;
@@ -49,4 +55,6 @@ private
       Count : Natural range 0 .. Lisp.Config.Max_Symbols := 0;
       Slots : Slot_Array;
    end record;
+
+   function Valid (T : Table) return Boolean is (T.Count <= Lisp.Config.Max_Symbols);
 end Lisp.Symbols;

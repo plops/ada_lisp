@@ -1,11 +1,28 @@
 package body Lisp.Runtime with SPARK_Mode is
    use type Lisp.Types.Error_Code;
 
+   procedure Intern_Known
+     (RT      : in out State;
+      Name    : in String;
+      First   : in Positive;
+      Last    : in Natural;
+      Name_Id : out Lisp.Types.Symbol_Id;
+      Error   : out Lisp.Types.Error_Code)
+   with
+     Pre  => Valid (RT)
+       and then Name'First = 1
+       and then First in Name'Range
+       and then Last in First .. Name'Last,
+     Post => (if Lisp.Types."=" (Error, Lisp.Types.Error_None) then Valid (RT));
+
    procedure Bind_Primitive
      (RT      : in out State;
       Name_Id : in Lisp.Types.Symbol_Id;
       Prim    : in Lisp.Types.Primitive_Kind;
-      Error   : out Lisp.Types.Error_Code) is
+      Error   : out Lisp.Types.Error_Code)
+   with
+     Pre  => Valid (RT),
+     Post => (if Lisp.Types."=" (Error, Lisp.Types.Error_None) then Valid (RT)) is
       Ref : Lisp.Types.Cell_Ref;
    begin
       Lisp.Store.Make_Primitive (RT.Store, Prim, Ref, Error);
@@ -16,45 +33,74 @@ package body Lisp.Runtime with SPARK_Mode is
       Lisp.Env.Define_Global (RT.Env, Name_Id, Ref, Error);
    end Bind_Primitive;
 
+   procedure Intern_Known
+     (RT      : in out State;
+      Name    : in String;
+      First   : in Positive;
+      Last    : in Natural;
+      Name_Id : out Lisp.Types.Symbol_Id;
+      Error   : out Lisp.Types.Error_Code) is
+   begin
+      Lisp.Symbols.Intern (RT.Symbols, Name, First, Last, Name_Id, Error);
+   end Intern_Known;
+
    procedure Initialize (RT : in out State; Error : out Lisp.Types.Error_Code) is
+      Name_Id : Lisp.Types.Symbol_Id;
    begin
       Lisp.Symbols.Initialize (RT.Symbols);
       Lisp.Store.Initialize (RT.Store);
       Lisp.Env.Initialize (RT.Env);
       RT.Known := (others => 0);
+      pragma Assert (Valid (RT));
 
-      Lisp.Symbols.Intern (RT.Symbols, "quote", 1, 5, RT.Known.Quote_Id, Error);
+      Intern_Known (RT, "quote", 1, 5, Name_Id, Error);
       if Error /= Lisp.Types.Error_None then return; end if;
-      Lisp.Symbols.Intern (RT.Symbols, "if", 1, 2, RT.Known.If_Id, Error);
+      RT.Known.Quote_Id := Name_Id;
+      Intern_Known (RT, "if", 1, 2, Name_Id, Error);
       if Error /= Lisp.Types.Error_None then return; end if;
-      Lisp.Symbols.Intern (RT.Symbols, "lambda", 1, 6, RT.Known.Lambda_Id, Error);
+      RT.Known.If_Id := Name_Id;
+      Intern_Known (RT, "lambda", 1, 6, Name_Id, Error);
       if Error /= Lisp.Types.Error_None then return; end if;
-      Lisp.Symbols.Intern (RT.Symbols, "define", 1, 6, RT.Known.Define_Id, Error);
+      RT.Known.Lambda_Id := Name_Id;
+      Intern_Known (RT, "define", 1, 6, Name_Id, Error);
       if Error /= Lisp.Types.Error_None then return; end if;
-      Lisp.Symbols.Intern (RT.Symbols, "begin", 1, 5, RT.Known.Begin_Id, Error);
+      RT.Known.Define_Id := Name_Id;
+      Intern_Known (RT, "begin", 1, 5, Name_Id, Error);
       if Error /= Lisp.Types.Error_None then return; end if;
-      Lisp.Symbols.Intern (RT.Symbols, "atom", 1, 4, RT.Known.Atom_Id, Error);
+      RT.Known.Begin_Id := Name_Id;
+      Intern_Known (RT, "atom", 1, 4, Name_Id, Error);
       if Error /= Lisp.Types.Error_None then return; end if;
-      Lisp.Symbols.Intern (RT.Symbols, "eq", 1, 2, RT.Known.Eq_Id, Error);
+      RT.Known.Atom_Id := Name_Id;
+      Intern_Known (RT, "eq", 1, 2, Name_Id, Error);
       if Error /= Lisp.Types.Error_None then return; end if;
-      Lisp.Symbols.Intern (RT.Symbols, "cons", 1, 4, RT.Known.Cons_Id, Error);
+      RT.Known.Eq_Id := Name_Id;
+      Intern_Known (RT, "cons", 1, 4, Name_Id, Error);
       if Error /= Lisp.Types.Error_None then return; end if;
-      Lisp.Symbols.Intern (RT.Symbols, "car", 1, 3, RT.Known.Car_Id, Error);
+      RT.Known.Cons_Id := Name_Id;
+      Intern_Known (RT, "car", 1, 3, Name_Id, Error);
       if Error /= Lisp.Types.Error_None then return; end if;
-      Lisp.Symbols.Intern (RT.Symbols, "cdr", 1, 3, RT.Known.Cdr_Id, Error);
+      RT.Known.Car_Id := Name_Id;
+      Intern_Known (RT, "cdr", 1, 3, Name_Id, Error);
       if Error /= Lisp.Types.Error_None then return; end if;
-      Lisp.Symbols.Intern (RT.Symbols, "null", 1, 4, RT.Known.Null_Id, Error);
+      RT.Known.Cdr_Id := Name_Id;
+      Intern_Known (RT, "null", 1, 4, Name_Id, Error);
       if Error /= Lisp.Types.Error_None then return; end if;
-      Lisp.Symbols.Intern (RT.Symbols, "+", 1, 1, RT.Known.Add_Id, Error);
+      RT.Known.Null_Id := Name_Id;
+      Intern_Known (RT, "+", 1, 1, Name_Id, Error);
       if Error /= Lisp.Types.Error_None then return; end if;
-      Lisp.Symbols.Intern (RT.Symbols, "-", 1, 1, RT.Known.Sub_Id, Error);
+      RT.Known.Add_Id := Name_Id;
+      Intern_Known (RT, "-", 1, 1, Name_Id, Error);
       if Error /= Lisp.Types.Error_None then return; end if;
-      Lisp.Symbols.Intern (RT.Symbols, "*", 1, 1, RT.Known.Mul_Id, Error);
+      RT.Known.Sub_Id := Name_Id;
+      Intern_Known (RT, "*", 1, 1, Name_Id, Error);
       if Error /= Lisp.Types.Error_None then return; end if;
-      Lisp.Symbols.Intern (RT.Symbols, "<", 1, 1, RT.Known.Lt_Id, Error);
+      RT.Known.Mul_Id := Name_Id;
+      Intern_Known (RT, "<", 1, 1, Name_Id, Error);
       if Error /= Lisp.Types.Error_None then return; end if;
-      Lisp.Symbols.Intern (RT.Symbols, "<=", 1, 2, RT.Known.Le_Id, Error);
+      RT.Known.Lt_Id := Name_Id;
+      Intern_Known (RT, "<=", 1, 2, Name_Id, Error);
       if Error /= Lisp.Types.Error_None then return; end if;
+      RT.Known.Le_Id := Name_Id;
 
       Bind_Primitive (RT, RT.Known.Atom_Id, Lisp.Types.Prim_Atom, Error);
       if Error /= Lisp.Types.Error_None then return; end if;
@@ -81,11 +127,6 @@ package body Lisp.Runtime with SPARK_Mode is
 
       Error := Lisp.Types.Error_None;
    end Initialize;
-
-   function Valid (RT : State) return Boolean is
-     (Lisp.Symbols.Valid (RT.Symbols)
-      and Lisp.Store.Valid (RT.Store)
-      and Lisp.Env.Valid (RT.Env));
 
    function Is_Reserved (RT : State; Name : Lisp.Types.Symbol_Id) return Boolean is
      (Name = RT.Known.Quote_Id

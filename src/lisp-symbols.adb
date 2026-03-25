@@ -8,11 +8,6 @@ package body Lisp.Symbols with SPARK_Mode is
          Slots => (others => (Length => 0, Chars => (others => ' '))));
    end Initialize;
 
-   function Valid (T : Table) return Boolean is
-   begin
-      return T.Count <= Lisp.Config.Max_Symbols;
-   end Valid;
-
    function Equal_Slice
      (T      : Table;
       Id     : Lisp.Types.Symbol_Id;

@@ -9,21 +9,33 @@ package body Lisp.Printer with SPARK_Mode is
      (RT     : in Lisp.Runtime.State;
       Ref    : in Lisp.Types.Cell_Ref;
       Buffer : in out Lisp.Text_Buffers.Buffer;
-      Error  : out Lisp.Types.Error_Code) is
+      Error  : out Lisp.Types.Error_Code)
+   with
+     Pre  => Lisp.Runtime.Valid (RT)
+       and then Lisp.Text_Buffers.Valid (Buffer)
+       and then (Ref = Lisp.Store.Nil_Ref or else Lisp.Store.Is_Valid_Ref (RT.Store, Ref)),
+     Post => Lisp.Runtime.Valid (RT)
+       and then Lisp.Text_Buffers.Valid (Buffer) is
    begin
       Error := Lisp.Types.Error_None;
       if Ref = Lisp.Store.Nil_Ref then
          return;
       elsif Lisp.Store.Kind_Of (RT.Store, Ref) = Lisp.Types.Cons_Cell then
-         Lisp.Text_Buffers.Append_Char (Buffer, ' ', Error);
-         if Error /= Lisp.Types.Error_None then
-            return;
-         end if;
-         Print (RT, Lisp.Store.Car (RT.Store, Ref), Buffer, Error);
-         if Error /= Lisp.Types.Error_None then
-            return;
-         end if;
-         Print_List_Tail (RT, Lisp.Store.Cdr (RT.Store, Ref), Buffer, Error);
+         declare
+            pragma Assert (Lisp.Store.Valid (RT.Store));
+            Head_Ref : constant Lisp.Types.Cell_Ref := Lisp.Store.Car (RT.Store, Ref);
+            Tail_Ref : constant Lisp.Types.Cell_Ref := Lisp.Store.Cdr (RT.Store, Ref);
+         begin
+            Lisp.Text_Buffers.Append_Char (Buffer, ' ', Error);
+            if Error /= Lisp.Types.Error_None then
+               return;
+            end if;
+            Print (RT, Head_Ref, Buffer, Error);
+            if Error /= Lisp.Types.Error_None then
+               return;
+            end if;
+            Print_List_Tail (RT, Tail_Ref, Buffer, Error);
+         end;
       else
          Lisp.Text_Buffers.Append_String (Buffer, " . ", Error);
          if Error /= Lisp.Types.Error_None then
@@ -57,19 +69,25 @@ package body Lisp.Printer with SPARK_Mode is
          when Lisp.Types.Symbol_Cell =>
             Lisp.Symbols.Lookup_Image (RT.Symbols, Lisp.Store.Symbol_Value (RT.Store, Ref), Buffer, Error);
          when Lisp.Types.Cons_Cell =>
-            Lisp.Text_Buffers.Append_Char (Buffer, '(', Error);
-            if Error /= Lisp.Types.Error_None then
-               return;
-            end if;
-            Print (RT, Lisp.Store.Car (RT.Store, Ref), Buffer, Error);
-            if Error /= Lisp.Types.Error_None then
-               return;
-            end if;
-            Print_List_Tail (RT, Lisp.Store.Cdr (RT.Store, Ref), Buffer, Error);
-            if Error /= Lisp.Types.Error_None then
-               return;
-            end if;
-            Lisp.Text_Buffers.Append_Char (Buffer, ')', Error);
+            declare
+               pragma Assert (Lisp.Store.Valid (RT.Store));
+               Head_Ref : constant Lisp.Types.Cell_Ref := Lisp.Store.Car (RT.Store, Ref);
+               Tail_Ref : constant Lisp.Types.Cell_Ref := Lisp.Store.Cdr (RT.Store, Ref);
+            begin
+               Lisp.Text_Buffers.Append_Char (Buffer, '(', Error);
+               if Error /= Lisp.Types.Error_None then
+                  return;
+               end if;
+               Print (RT, Head_Ref, Buffer, Error);
+               if Error /= Lisp.Types.Error_None then
+                  return;
+               end if;
+               Print_List_Tail (RT, Tail_Ref, Buffer, Error);
+               if Error /= Lisp.Types.Error_None then
+                  return;
+               end if;
+               Lisp.Text_Buffers.Append_Char (Buffer, ')', Error);
+            end;
          when Lisp.Types.Primitive_Cell =>
             Lisp.Text_Buffers.Append_String (Buffer, "#<primitive>", Error);
          when Lisp.Types.Closure_Cell =>

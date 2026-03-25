@@ -8,9 +8,7 @@ package body Lisp.Arith with SPARK_Mode is
       Sum : constant Long_Long_Integer :=
         Long_Long_Integer (Left) + Long_Long_Integer (Right);
    begin
-      if Sum >= Long_Long_Integer (Lisp.Config.Min_Int)
-        and then Sum <= Long_Long_Integer (Lisp.Config.Max_Int)
-      then
+      if Can_Add (Left, Right) then
          Value := Lisp.Types.Lisp_Int (Sum);
          Error := Lisp.Types.Error_None;
       else
@@ -26,9 +24,7 @@ package body Lisp.Arith with SPARK_Mode is
       Difference : constant Long_Long_Integer :=
         Long_Long_Integer (Left) - Long_Long_Integer (Right);
    begin
-      if Difference >= Long_Long_Integer (Lisp.Config.Min_Int)
-        and then Difference <= Long_Long_Integer (Lisp.Config.Max_Int)
-      then
+      if Can_Sub (Left, Right) then
          Value := Lisp.Types.Lisp_Int (Difference);
          Error := Lisp.Types.Error_None;
       else
@@ -44,9 +40,7 @@ package body Lisp.Arith with SPARK_Mode is
       Product : constant Long_Long_Integer :=
         Long_Long_Integer (Left) * Long_Long_Integer (Right);
    begin
-      if Product >= Long_Long_Integer (Lisp.Config.Min_Int)
-        and then Product <= Long_Long_Integer (Lisp.Config.Max_Int)
-      then
+      if Can_Mul (Left, Right) then
          Value := Lisp.Types.Lisp_Int (Product);
          Error := Lisp.Types.Error_None;
       else

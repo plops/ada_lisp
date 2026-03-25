@@ -4,9 +4,9 @@ set -eu
 lock_file="${TMPDIR:-/tmp}/ada_lisp_prove.lock"
 prove_steps="${GNATPROVE_STEPS:-200}"
 prove_jobs="${GNATPROVE_JOBS:-0}"
-prove_timeout="${GNATPROVE_TIMEOUT:-10}"
+prove_timeout="${GNATPROVE_TIMEOUT:-1}"
 prove_prover="${GNATPROVE_PROVER:-}"
-prove_level="${GNATPROVE_LEVEL:-}"
+prove_level="${GNATPROVE_LEVEL:-0}"
 
 exec 9>"$lock_file"
 flock 9
