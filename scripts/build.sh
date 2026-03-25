@@ -1,4 +1,4 @@
 #!/usr/bin/env bash
 set -eu
 
-gprbuild -P lisp.gpr app/lisp-main.adb
+gprbuild -j0 -P lisp.gpr app/lisp-main.adb
