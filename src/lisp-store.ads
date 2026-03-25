@@ -59,9 +59,17 @@ package Lisp.Store with SPARK_Mode is
       Error          : out Lisp.Types.Error_Code)
    with Pre => Valid (S), Post => Valid (S);
 
-   function Readable_Value (S : Arena; Ref : Lisp.Types.Cell_Ref) return Boolean;
-   function Proper_List (S : Arena; Ref : Lisp.Types.Cell_Ref) return Boolean;
-   function List_Length (S : Arena; Ref : Lisp.Types.Cell_Ref) return Natural;
+   function Readable_Value (S : Arena; Ref : Lisp.Types.Cell_Ref) return Boolean
+   with
+     Subprogram_Variant => (Decreases => Ref);
+
+   function Proper_List (S : Arena; Ref : Lisp.Types.Cell_Ref) return Boolean
+   with
+     Subprogram_Variant => (Decreases => Ref);
+
+   function List_Length (S : Arena; Ref : Lisp.Types.Cell_Ref) return Natural
+   with
+     Subprogram_Variant => (Decreases => Ref);
 
 private
    type Cell (Kind : Lisp.Types.Cell_Kind := Lisp.Types.Nil_Cell) is record

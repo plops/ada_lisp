@@ -54,4 +54,45 @@ private
       Next_Free : Natural range 1 .. Lisp.Config.Max_Frames + 1 := 2;
       Frames    : Frame_Array;
    end record;
+
+   function Name_Not_In_Tail
+     (Env_State : State;
+      Frame     : Positive;
+      Index     : Positive;
+      Probe     : Lisp.Types.Symbol_Id) return Boolean
+   with
+     Pre => Frame in Env_State.Frames'Range,
+     Subprogram_Variant =>
+       (Decreases => Lisp.Config.Max_Frame_Bindings - Index);
+
+   function Frame_Names_Unique
+     (Env_State : State;
+      Frame     : Positive;
+      Index     : Positive) return Boolean
+   with
+     Pre => Frame in Env_State.Frames'Range,
+     Subprogram_Variant =>
+       (Decreases => Lisp.Config.Max_Frame_Bindings - Index);
+
+   function All_Names_Unique
+     (Env_State : State;
+      Frame     : Natural) return Boolean
+   with
+     Subprogram_Variant =>
+       (Decreases => Lisp.Config.Max_Frames + 1 - Frame);
+
+   function Parents_Valid
+     (Env_State : State;
+      Frame     : Natural) return Boolean
+   with
+     Pre => Frame = 0 or else Frame in Env_State.Frames'Range,
+     Subprogram_Variant =>
+       (Decreases => Lisp.Config.Max_Frames + 1 - Frame);
+
+   function Valid (Env_State : State) return Boolean is
+     (Env_State.Next_Free >= 2
+      and then Env_State.Next_Free <= Lisp.Config.Max_Frames + 1
+      and then Env_State.Frames (1).Parent = Lisp.Types.No_Frame
+      and then Parents_Valid (Env_State, 2)
+      and then All_Names_Unique (Env_State, 1));
 end Lisp.Env;

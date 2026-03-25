@@ -13,32 +13,63 @@ package body Lisp.Env with SPARK_Mode is
                Values => (others => Lisp.Types.No_Ref))));
    end Initialize;
 
-   function Valid (Env_State : State) return Boolean is
+   function Name_Not_In_Tail
+     (Env_State : State;
+      Frame     : Positive;
+      Index     : Positive;
+      Probe     : Lisp.Types.Symbol_Id) return Boolean is
    begin
-      if Env_State.Next_Free < 2 or else Env_State.Next_Free > Lisp.Config.Max_Frames + 1 then
-         return False;
+      if Index > Env_State.Frames (Frame).Count then
+         return True;
+      else
+         return Env_State.Frames (Frame).Names (Index) /= Probe
+           and then Name_Not_In_Tail (Env_State, Frame, Index + 1, Probe);
       end if;
+   end Name_Not_In_Tail;
 
-      for F in 2 .. Env_State.Next_Free - 1 loop
-         if Env_State.Frames (F).Parent = Lisp.Types.No_Frame
-           or else Env_State.Frames (F).Parent >= F
-         then
-            return False;
-         end if;
-      end loop;
+   function Frame_Names_Unique
+     (Env_State : State;
+      Frame     : Positive;
+      Index     : Positive) return Boolean is
+   begin
+      if Index > Env_State.Frames (Frame).Count then
+         return True;
+      else
+         return Name_Not_In_Tail
+             (Env_State,
+              Frame,
+              Index + 1,
+              Env_State.Frames (Frame).Names (Index))
+           and then Frame_Names_Unique (Env_State, Frame, Index + 1);
+      end if;
+   end Frame_Names_Unique;
 
-      for F in 1 .. Env_State.Next_Free - 1 loop
-         for I in 1 .. Env_State.Frames (F).Count loop
-            for J in I + 1 .. Env_State.Frames (F).Count loop
-               if Env_State.Frames (F).Names (I) = Env_State.Frames (F).Names (J) then
-                  return False;
-               end if;
-            end loop;
-         end loop;
-      end loop;
+   function All_Names_Unique
+     (Env_State : State;
+      Frame     : Natural) return Boolean is
+   begin
+      if Frame = 0 then
+         return True;
+      elsif Frame >= Env_State.Next_Free then
+         return True;
+      else
+         return Frame_Names_Unique (Env_State, Positive (Frame), 1)
+           and then All_Names_Unique (Env_State, Frame + 1);
+      end if;
+   end All_Names_Unique;
 
-      return True;
-   end Valid;
+   function Parents_Valid
+     (Env_State : State;
+      Frame     : Natural) return Boolean is
+   begin
+      if Frame >= Env_State.Next_Free then
+         return True;
+      else
+         return Env_State.Frames (Positive (Frame)).Parent /= Lisp.Types.No_Frame
+           and then Env_State.Frames (Positive (Frame)).Parent < Frame
+           and then Parents_Valid (Env_State, Frame + 1);
+      end if;
+   end Parents_Valid;
 
    function Frame_Count (Env_State : State) return Natural is (Env_State.Next_Free - 1);
 
@@ -72,6 +103,7 @@ package body Lisp.Env with SPARK_Mode is
       Error     : out Lisp.Types.Error_Code) is
    begin
       for I in 1 .. Env_State.Frames (1).Count loop
+         pragma Loop_Invariant (Valid (Env_State));
          if Env_State.Frames (1).Names (I) = Name then
             Env_State.Frames (1).Values (I) := Value;
             Error := Lisp.Types.Error_None;
@@ -132,7 +164,9 @@ package body Lisp.Env with SPARK_Mode is
       Env_State.Next_Free := Env_State.Next_Free + 1;
       Env_State.Frames (Positive (Frame)).Parent := Parent;
       Env_State.Frames (Positive (Frame)).Count := Names'Length;
-      for I in 1 .. Names'Length loop
+      for I in Names'Range loop
+         pragma Loop_Invariant (Env_State.Frames (Positive (Frame)).Parent = Parent);
+         pragma Loop_Invariant (Env_State.Frames (Positive (Frame)).Count = Names'Length);
          Env_State.Frames (Positive (Frame)).Names (I) := Names (I);
          Env_State.Frames (Positive (Frame)).Values (I) := Values (I);
       end loop;

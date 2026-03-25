@@ -30,6 +30,8 @@ package body Lisp.Primitives with SPARK_Mode is
       Arg_Count  : in Natural;
       Result_Ref : out Lisp.Types.Cell_Ref;
       Error      : out Lisp.Types.Error_Code) is
+      Arg1      : Lisp.Types.Cell_Ref := Lisp.Types.No_Ref;
+      Arg2      : Lisp.Types.Cell_Ref := Lisp.Types.No_Ref;
       Left_Int  : Lisp.Types.Lisp_Int := 0;
       Right_Int : Lisp.Types.Lisp_Int := 0;
       Value     : Lisp.Types.Lisp_Int := 0;
@@ -40,27 +42,30 @@ package body Lisp.Primitives with SPARK_Mode is
             if Error /= Lisp.Types.Error_None then
                return;
             end if;
-            Result_Ref := Truth (Lisp.Store.Kind_Of (RT.Store, Args (Args'First)) /= Lisp.Types.Cons_Cell);
+            Arg1 := Args (Args'First);
+            Result_Ref := Truth (Lisp.Store.Kind_Of (RT.Store, Arg1) /= Lisp.Types.Cons_Cell);
             Error := Lisp.Types.Error_None;
          when Lisp.Types.Prim_Eq =>
             Expect_Arity (2, Arg_Count, Result_Ref, Error);
             if Error /= Lisp.Types.Error_None then
                return;
             end if;
-            if Args (Args'First) = Args (Args'First + 1) then
+            Arg1 := Args (Args'First);
+            Arg2 := Args (Args'First + 1);
+            if Arg1 = Arg2 then
                Result_Ref := Lisp.Store.True_Ref;
-            elsif Lisp.Store.Kind_Of (RT.Store, Args (Args'First)) = Lisp.Types.Integer_Cell
-              and then Lisp.Store.Kind_Of (RT.Store, Args (Args'First + 1)) = Lisp.Types.Integer_Cell
+            elsif Lisp.Store.Kind_Of (RT.Store, Arg1) = Lisp.Types.Integer_Cell
+              and then Lisp.Store.Kind_Of (RT.Store, Arg2) = Lisp.Types.Integer_Cell
             then
                Result_Ref := Truth
-                 (Lisp.Store.Integer_Value (RT.Store, Args (Args'First)) =
-                  Lisp.Store.Integer_Value (RT.Store, Args (Args'First + 1)));
-            elsif Lisp.Store.Kind_Of (RT.Store, Args (Args'First)) = Lisp.Types.Symbol_Cell
-              and then Lisp.Store.Kind_Of (RT.Store, Args (Args'First + 1)) = Lisp.Types.Symbol_Cell
+                 (Lisp.Store.Integer_Value (RT.Store, Arg1) =
+                  Lisp.Store.Integer_Value (RT.Store, Arg2));
+            elsif Lisp.Store.Kind_Of (RT.Store, Arg1) = Lisp.Types.Symbol_Cell
+              and then Lisp.Store.Kind_Of (RT.Store, Arg2) = Lisp.Types.Symbol_Cell
             then
                Result_Ref := Truth
-                 (Lisp.Store.Symbol_Value (RT.Store, Args (Args'First)) =
-                  Lisp.Store.Symbol_Value (RT.Store, Args (Args'First + 1)));
+                 (Lisp.Store.Symbol_Value (RT.Store, Arg1) =
+                  Lisp.Store.Symbol_Value (RT.Store, Arg2));
             else
                Result_Ref := Lisp.Store.Nil_Ref;
             end if;
@@ -70,20 +75,24 @@ package body Lisp.Primitives with SPARK_Mode is
             if Error /= Lisp.Types.Error_None then
                return;
             end if;
-            Lisp.Store.Make_Cons (RT.Store, Args (Args'First), Args (Args'First + 1), Result_Ref, Error);
+            Arg1 := Args (Args'First);
+            Arg2 := Args (Args'First + 1);
+            pragma Assert (Lisp.Store.Valid (RT.Store));
+            Lisp.Store.Make_Cons (RT.Store, Arg1, Arg2, Result_Ref, Error);
          when Lisp.Types.Prim_Car =>
             Expect_Arity (1, Arg_Count, Result_Ref, Error);
             if Error /= Lisp.Types.Error_None then
                return;
             end if;
-            if Args (Args'First) = Lisp.Store.Nil_Ref then
+            Arg1 := Args (Args'First);
+            if Arg1 = Lisp.Store.Nil_Ref then
                Result_Ref := Lisp.Store.Nil_Ref;
                Error := Lisp.Types.Error_None;
-            elsif Lisp.Store.Kind_Of (RT.Store, Args (Args'First)) /= Lisp.Types.Cons_Cell then
+            elsif Lisp.Store.Kind_Of (RT.Store, Arg1) /= Lisp.Types.Cons_Cell then
                Result_Ref := Lisp.Types.No_Ref;
                Error := Lisp.Types.Error_Type;
             else
-               Result_Ref := Lisp.Store.Car (RT.Store, Args (Args'First));
+               Result_Ref := Lisp.Store.Car (RT.Store, Arg1);
                Error := Lisp.Types.Error_None;
             end if;
          when Lisp.Types.Prim_Cdr =>
@@ -91,14 +100,15 @@ package body Lisp.Primitives with SPARK_Mode is
             if Error /= Lisp.Types.Error_None then
                return;
             end if;
-            if Args (Args'First) = Lisp.Store.Nil_Ref then
+            Arg1 := Args (Args'First);
+            if Arg1 = Lisp.Store.Nil_Ref then
                Result_Ref := Lisp.Store.Nil_Ref;
                Error := Lisp.Types.Error_None;
-            elsif Lisp.Store.Kind_Of (RT.Store, Args (Args'First)) /= Lisp.Types.Cons_Cell then
+            elsif Lisp.Store.Kind_Of (RT.Store, Arg1) /= Lisp.Types.Cons_Cell then
                Result_Ref := Lisp.Types.No_Ref;
                Error := Lisp.Types.Error_Type;
             else
-               Result_Ref := Lisp.Store.Cdr (RT.Store, Args (Args'First));
+               Result_Ref := Lisp.Store.Cdr (RT.Store, Arg1);
                Error := Lisp.Types.Error_None;
             end if;
          when Lisp.Types.Prim_Null =>
@@ -106,27 +116,31 @@ package body Lisp.Primitives with SPARK_Mode is
             if Error /= Lisp.Types.Error_None then
                return;
             end if;
-            Result_Ref := Truth (Args (Args'First) = Lisp.Store.Nil_Ref);
+            Arg1 := Args (Args'First);
+            Result_Ref := Truth (Arg1 = Lisp.Store.Nil_Ref);
             Error := Lisp.Types.Error_None;
          when Lisp.Types.Prim_Add | Lisp.Types.Prim_Sub | Lisp.Types.Prim_Mul | Lisp.Types.Prim_Lt | Lisp.Types.Prim_Le =>
             Expect_Arity (2, Arg_Count, Result_Ref, Error);
             if Error /= Lisp.Types.Error_None then
                return;
             end if;
-            if Lisp.Store.Kind_Of (RT.Store, Args (Args'First)) /= Lisp.Types.Integer_Cell
+            Arg1 := Args (Args'First);
+            Arg2 := Args (Args'First + 1);
+            if Lisp.Store.Kind_Of (RT.Store, Arg1) /= Lisp.Types.Integer_Cell
               or else
-               Lisp.Store.Kind_Of (RT.Store, Args (Args'First + 1)) /= Lisp.Types.Integer_Cell
+               Lisp.Store.Kind_Of (RT.Store, Arg2) /= Lisp.Types.Integer_Cell
             then
                Result_Ref := Lisp.Types.No_Ref;
                Error := Lisp.Types.Error_Type;
                return;
             end if;
-            Left_Int := Lisp.Store.Integer_Value (RT.Store, Args (Args'First));
-            Right_Int := Lisp.Store.Integer_Value (RT.Store, Args (Args'First + 1));
+            Left_Int := Lisp.Store.Integer_Value (RT.Store, Arg1);
+            Right_Int := Lisp.Store.Integer_Value (RT.Store, Arg2);
             case Prim is
                when Lisp.Types.Prim_Add =>
                   Lisp.Arith.Try_Add (Left_Int, Right_Int, Value, Error);
                   if Error = Lisp.Types.Error_None then
+                     pragma Assert (Lisp.Store.Valid (RT.Store));
                      Lisp.Store.Make_Integer (RT.Store, Value, Result_Ref, Error);
                   else
                      Result_Ref := Lisp.Types.No_Ref;
@@ -134,6 +148,7 @@ package body Lisp.Primitives with SPARK_Mode is
                when Lisp.Types.Prim_Sub =>
                   Lisp.Arith.Try_Sub (Left_Int, Right_Int, Value, Error);
                   if Error = Lisp.Types.Error_None then
+                     pragma Assert (Lisp.Store.Valid (RT.Store));
                      Lisp.Store.Make_Integer (RT.Store, Value, Result_Ref, Error);
                   else
                      Result_Ref := Lisp.Types.No_Ref;
@@ -141,6 +156,7 @@ package body Lisp.Primitives with SPARK_Mode is
                when Lisp.Types.Prim_Mul =>
                   Lisp.Arith.Try_Mul (Left_Int, Right_Int, Value, Error);
                   if Error = Lisp.Types.Error_None then
+                     pragma Assert (Lisp.Store.Valid (RT.Store));
                      Lisp.Store.Make_Integer (RT.Store, Value, Result_Ref, Error);
                   else
                      Result_Ref := Lisp.Types.No_Ref;
