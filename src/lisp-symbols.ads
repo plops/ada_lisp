@@ -5,7 +5,7 @@ with Lisp.Types;
 package Lisp.Symbols with SPARK_Mode is
    type Table is private;
 
-   procedure Initialize (T : out Table) with Post => Valid (T);
+   procedure Initialize (T : in out Table) with Post => Valid (T);
    function Valid (T : Table) return Boolean;
 
    procedure Intern

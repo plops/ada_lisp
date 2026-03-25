@@ -15,11 +15,16 @@ package body Lisp.Driver with SPARK_Mode is
       Buffer : in out Lisp.Text_Buffers.Buffer;
       Error  : out Lisp.Types.Error_Code) is
       RT       : Lisp.Runtime.State;
-      Expr     : Lisp.Types.Cell_Ref := Lisp.Types.No_Ref;
-      Result   : Lisp.Types.Cell_Ref := Lisp.Types.No_Ref;
-      Next_Pos : Natural := Source'First;
+      Expr     : Lisp.Types.Cell_Ref;
+      Result   : Lisp.Types.Cell_Ref;
+      Next_Pos : Natural := 1;
       Tok      : Lisp.Lexer.Token;
    begin
+      if Source'Length = 0 then
+         Error := Lisp.Types.Error_Syntax;
+         return;
+      end if;
+
       Lisp.Runtime.Initialize (RT, Error);
       if Error /= Lisp.Types.Error_None then
          return;
@@ -27,6 +32,11 @@ package body Lisp.Driver with SPARK_Mode is
 
       Lisp.Parser.Parse_One (Source, Source'First, RT, Expr, Next_Pos, Error);
       if Error /= Lisp.Types.Error_None then
+         return;
+      end if;
+
+      if Next_Pos = 0 then
+         Error := Lisp.Types.Error_Syntax;
          return;
       end if;
 

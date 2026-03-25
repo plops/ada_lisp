@@ -1,13 +1,11 @@
 package body Lisp.Symbols with SPARK_Mode is
    use type Lisp.Types.Error_Code;
 
-   procedure Initialize (T : out Table) is
+   procedure Initialize (T : in out Table) is
    begin
-      T.Count := 0;
-      for I in T.Slots'Range loop
-         T.Slots (I).Length := 0;
-         T.Slots (I).Chars := (others => ' ');
-      end loop;
+      T :=
+        (Count => 0,
+         Slots => (others => (Length => 0, Chars => (others => ' '))));
    end Initialize;
 
    function Valid (T : Table) return Boolean is

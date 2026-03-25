@@ -11,6 +11,7 @@ package body Lisp.Printer with SPARK_Mode is
       Buffer : in out Lisp.Text_Buffers.Buffer;
       Error  : out Lisp.Types.Error_Code) is
    begin
+      Error := Lisp.Types.Error_None;
       if Ref = Lisp.Store.Nil_Ref then
          return;
       elsif Lisp.Store.Kind_Of (RT.Store, Ref) = Lisp.Types.Cons_Cell then

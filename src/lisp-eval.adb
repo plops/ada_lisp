@@ -18,6 +18,7 @@ package body Lisp.Eval with SPARK_Mode is
       Error       : out Lisp.Types.Error_Code) is
       Cursor : Lisp.Types.Cell_Ref := List_Ref;
    begin
+      Elements := (others => Lisp.Types.No_Ref);
       Count := 0;
       while Cursor /= Lisp.Store.Nil_Ref loop
          if Lisp.Store.Kind_Of (RT.Store, Cursor) /= Lisp.Types.Cons_Cell then
@@ -43,6 +44,7 @@ package body Lisp.Eval with SPARK_Mode is
       Error    : out Lisp.Types.Error_Code) is
       Values : Lisp.Types.Cell_Ref_Array (Names'Range) := (others => Lisp.Types.No_Ref);
    begin
+      Names := (others => 0);
       Proper_List_To_Array (RT, List_Ref, Values, Count, Error);
       if Error /= Lisp.Types.Error_None then
          return;
@@ -78,6 +80,7 @@ package body Lisp.Eval with SPARK_Mode is
       Error         : out Lisp.Types.Error_Code) is
       Exprs : Lisp.Types.Cell_Ref_Array (Values'Range) := (others => Lisp.Types.No_Ref);
    begin
+      Values := (others => Lisp.Types.No_Ref);
       Proper_List_To_Array (RT, List_Ref, Exprs, Count, Error);
       if Error /= Lisp.Types.Error_None then
          return;
@@ -100,6 +103,7 @@ package body Lisp.Eval with SPARK_Mode is
       Error         : out Lisp.Types.Error_Code) is
       Cursor : Lisp.Types.Cell_Ref := Forms;
    begin
+      Result_Ref := Lisp.Types.No_Ref;
       if Cursor = Lisp.Store.Nil_Ref then
          Result_Ref := Lisp.Store.Nil_Ref;
          Error := Lisp.Types.Error_None;
@@ -310,14 +314,6 @@ package body Lisp.Eval with SPARK_Mode is
                when Lisp.Types.Closure_Cell =>
                   Params := Lisp.Store.Closure_Params (RT.Store, Operator);
                   Body_Expr := Lisp.Store.Closure_Body (RT.Store, Operator);
-                  Params_To_Array (RT, Params, Name_Array, Arg_Count, Error);
-                  if Error /= Lisp.Types.Error_None then
-                     Result_Ref := Lisp.Types.No_Ref;
-                     return;
-                  end if;
-                  if Arg_Count /= Arg_Count then
-                     null;
-                  end if;
                   declare
                      Param_Count : Natural := 0;
                   begin

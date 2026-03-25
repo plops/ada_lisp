@@ -17,7 +17,7 @@ package body Lisp.Text_Buffers with SPARK_Mode is
          return "";
       else
          declare
-            Result : String (1 .. B.Count);
+            Result : String (1 .. B.Count) := (others => ' ');
          begin
             for I in 1 .. B.Count loop
                Result (I) := B.Data (I);
@@ -46,7 +46,7 @@ package body Lisp.Text_Buffers with SPARK_Mode is
      (B     : in out Buffer;
       S     : in String;
       Error : out Lisp.Types.Error_Code) is
-      Local_Error : Lisp.Types.Error_Code := Lisp.Types.Error_None;
+      Local_Error : Lisp.Types.Error_Code;
    begin
       for C of S loop
          Append_Char (B, C, Local_Error);

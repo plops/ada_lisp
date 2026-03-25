@@ -1,7 +1,12 @@
 #!/usr/bin/env bash
 set -eu
 
+units=()
+for unit in src/*.ads src/*.adb proofs/*.ads proofs/*.adb; do
+    units+=("$(basename "$unit")")
+done
+
 gprbuild -P lisp.gpr
-gnatprove -P lisp.gpr --mode=check_all
-gnatprove -P lisp.gpr --mode=flow
-gnatprove -P lisp.gpr --mode=prove --steps=1000
+gnatprove -P lisp.gpr --mode=check_all -u "${units[@]}"
+gnatprove -P lisp.gpr --mode=flow -u "${units[@]}"
+gnatprove -P lisp.gpr --mode=prove --steps=1000 -u "${units[@]}"

@@ -6,7 +6,7 @@ package Lisp.Env with SPARK_Mode is
 
    type State is private;
 
-   procedure Initialize (Env_State : out State) with Post => Valid (Env_State);
+   procedure Initialize (Env_State : in out State) with Post => Valid (Env_State);
    function Valid (Env_State : State) return Boolean;
    function Frame_Count (Env_State : State) return Natural;
 
@@ -32,7 +32,11 @@ package Lisp.Env with SPARK_Mode is
       Values    : in Lisp.Types.Cell_Ref_Array;
       Frame     : out Lisp.Types.Frame_Id;
       Error     : out Lisp.Types.Error_Code)
-   with Pre => Valid (Env_State), Post => Valid (Env_State);
+   with
+     Pre => Valid (Env_State)
+       and then Names'First = 1
+       and then Values'First = 1,
+     Post => Valid (Env_State);
 
 private
    subtype Binding_Index is Positive range 1 .. Lisp.Config.Max_Frame_Bindings;

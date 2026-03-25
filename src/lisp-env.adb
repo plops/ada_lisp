@@ -1,16 +1,16 @@
 package body Lisp.Env with SPARK_Mode is
    use type Lisp.Types.Error_Code;
 
-   procedure Initialize (Env_State : out State) is
+   procedure Initialize (Env_State : in out State) is
    begin
-      Env_State.Next_Free := 2;
-      for I in Env_State.Frames'Range loop
-         Env_State.Frames (I).Parent := Lisp.Types.No_Frame;
-         Env_State.Frames (I).Count := 0;
-         Env_State.Frames (I).Names := (others => 0);
-         Env_State.Frames (I).Values := (others => Lisp.Types.No_Ref);
-      end loop;
-      Env_State.Frames (1).Parent := Lisp.Types.No_Frame;
+      Env_State :=
+        (Next_Free => 2,
+         Frames    =>
+           (others =>
+              (Parent => Lisp.Types.No_Frame,
+               Count  => 0,
+               Names  => (others => 0),
+               Values => (others => Lisp.Types.No_Ref))));
    end Initialize;
 
    function Valid (Env_State : State) return Boolean is
@@ -111,13 +111,15 @@ package body Lisp.Env with SPARK_Mode is
       end if;
 
       for I in Names'Range loop
-         for J in I + 1 .. Names'Last loop
-            if Names (I) = Names (J) then
-               Frame := Lisp.Types.No_Frame;
-               Error := Lisp.Types.Error_Invalid_Parameter_List;
-               return;
-            end if;
-         end loop;
+         if I < Names'Last then
+            for J in I + 1 .. Names'Last loop
+               if Names (I) = Names (J) then
+                  Frame := Lisp.Types.No_Frame;
+                  Error := Lisp.Types.Error_Invalid_Parameter_List;
+                  return;
+               end if;
+            end loop;
+         end if;
       end loop;
 
       if Env_State.Next_Free = Lisp.Config.Max_Frames + 1 then
@@ -131,8 +133,8 @@ package body Lisp.Env with SPARK_Mode is
       Env_State.Frames (Positive (Frame)).Parent := Parent;
       Env_State.Frames (Positive (Frame)).Count := Names'Length;
       for I in 1 .. Names'Length loop
-         Env_State.Frames (Positive (Frame)).Names (I) := Names (Names'First + I - 1);
-         Env_State.Frames (Positive (Frame)).Values (I) := Values (Values'First + I - 1);
+         Env_State.Frames (Positive (Frame)).Names (I) := Names (I);
+         Env_State.Frames (Positive (Frame)).Values (I) := Values (I);
       end loop;
       Error := Lisp.Types.Error_None;
    end Push_Frame;

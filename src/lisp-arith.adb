@@ -35,7 +35,7 @@ package body Lisp.Arith with SPARK_Mode is
       Error       : out Lisp.Types.Error_Code) is
    begin
       if Can_Add (Left, Right) then
-         Value := Left + Right;
+         Value := Lisp.Types.Lisp_Int (Long_Long_Integer (Left) + Long_Long_Integer (Right));
          Error := Lisp.Types.Error_None;
       else
          Value := 0;
@@ -49,7 +49,7 @@ package body Lisp.Arith with SPARK_Mode is
       Error       : out Lisp.Types.Error_Code) is
    begin
       if Can_Sub (Left, Right) then
-         Value := Left - Right;
+         Value := Lisp.Types.Lisp_Int (Long_Long_Integer (Left) - Long_Long_Integer (Right));
          Error := Lisp.Types.Error_None;
       else
          Value := 0;
@@ -63,7 +63,12 @@ package body Lisp.Arith with SPARK_Mode is
       Error       : out Lisp.Types.Error_Code) is
    begin
       if Can_Mul (Left, Right) then
-         Value := Lisp.Types.Lisp_Int (Long_Long_Integer (Left) * Long_Long_Integer (Right));
+         declare
+            Product : constant Long_Long_Integer :=
+              Long_Long_Integer (Left) * Long_Long_Integer (Right);
+         begin
+            Value := Lisp.Types.Lisp_Int (Product);
+         end;
          Error := Lisp.Types.Error_None;
       else
          Value := 0;

@@ -2,147 +2,83 @@ package body Lisp.Runtime with SPARK_Mode is
    use type Lisp.Types.Error_Code;
 
    procedure Bind_Primitive
-     (RT    : in out State;
-      Name  : in String;
-      Prim  : in Lisp.Types.Primitive_Kind;
-      Id    : out Lisp.Types.Symbol_Id;
-      Error : out Lisp.Types.Error_Code) is
-      Ref : Lisp.Types.Cell_Ref := Lisp.Types.No_Ref;
+     (RT      : in out State;
+      Name_Id : in Lisp.Types.Symbol_Id;
+      Prim    : in Lisp.Types.Primitive_Kind;
+      Error   : out Lisp.Types.Error_Code) is
+      Ref : Lisp.Types.Cell_Ref;
    begin
-      Lisp.Symbols.Intern (RT.Symbols, Name, Name'First, Name'Last, Id, Error);
-      if Error /= Lisp.Types.Error_None then
-         return;
-      end if;
-
       Lisp.Store.Make_Primitive (RT.Store, Prim, Ref, Error);
       if Error /= Lisp.Types.Error_None then
          return;
       end if;
 
-      Lisp.Env.Define_Global (RT.Env, Id, Ref, Error);
+      Lisp.Env.Define_Global (RT.Env, Name_Id, Ref, Error);
    end Bind_Primitive;
 
-   procedure Initialize (RT : out State; Error : out Lisp.Types.Error_Code) is
-      Dummy : Lisp.Types.Symbol_Id := 0;
-      Ref   : Lisp.Types.Cell_Ref := Lisp.Types.No_Ref;
-
-      procedure Intern_Known
-        (Name  : in String;
-         Slot  : out Lisp.Types.Symbol_Id) is
-      begin
-         Lisp.Symbols.Intern (RT.Symbols, Name, Name'First, Name'Last, Slot, Error);
-      end Intern_Known;
+   procedure Initialize (RT : in out State; Error : out Lisp.Types.Error_Code) is
    begin
       Lisp.Symbols.Initialize (RT.Symbols);
       Lisp.Store.Initialize (RT.Store);
       Lisp.Env.Initialize (RT.Env);
+      RT.Known := (others => 0);
 
-      Intern_Known ("quote", RT.Known.Quote_Id);  if Error /= Lisp.Types.Error_None then return; end if;
-      Intern_Known ("if", RT.Known.If_Id);        if Error /= Lisp.Types.Error_None then return; end if;
-      Intern_Known ("lambda", RT.Known.Lambda_Id);if Error /= Lisp.Types.Error_None then return; end if;
-      Intern_Known ("define", RT.Known.Define_Id);if Error /= Lisp.Types.Error_None then return; end if;
-      Intern_Known ("begin", RT.Known.Begin_Id);  if Error /= Lisp.Types.Error_None then return; end if;
-      Intern_Known ("atom", RT.Known.Atom_Id);    if Error /= Lisp.Types.Error_None then return; end if;
-      Intern_Known ("eq", RT.Known.Eq_Id);        if Error /= Lisp.Types.Error_None then return; end if;
-      Intern_Known ("cons", RT.Known.Cons_Id);    if Error /= Lisp.Types.Error_None then return; end if;
-      Intern_Known ("car", RT.Known.Car_Id);      if Error /= Lisp.Types.Error_None then return; end if;
-      Intern_Known ("cdr", RT.Known.Cdr_Id);      if Error /= Lisp.Types.Error_None then return; end if;
-      Intern_Known ("null", RT.Known.Null_Id);    if Error /= Lisp.Types.Error_None then return; end if;
-      Intern_Known ("+", RT.Known.Add_Id);        if Error /= Lisp.Types.Error_None then return; end if;
-      Intern_Known ("-", RT.Known.Sub_Id);        if Error /= Lisp.Types.Error_None then return; end if;
-      Intern_Known ("*", RT.Known.Mul_Id);        if Error /= Lisp.Types.Error_None then return; end if;
-      Intern_Known ("<", RT.Known.Lt_Id);         if Error /= Lisp.Types.Error_None then return; end if;
-      Intern_Known ("<=", RT.Known.Le_Id);        if Error /= Lisp.Types.Error_None then return; end if;
+      Lisp.Symbols.Intern (RT.Symbols, "quote", 1, 5, RT.Known.Quote_Id, Error);
+      if Error /= Lisp.Types.Error_None then return; end if;
+      Lisp.Symbols.Intern (RT.Symbols, "if", 1, 2, RT.Known.If_Id, Error);
+      if Error /= Lisp.Types.Error_None then return; end if;
+      Lisp.Symbols.Intern (RT.Symbols, "lambda", 1, 6, RT.Known.Lambda_Id, Error);
+      if Error /= Lisp.Types.Error_None then return; end if;
+      Lisp.Symbols.Intern (RT.Symbols, "define", 1, 6, RT.Known.Define_Id, Error);
+      if Error /= Lisp.Types.Error_None then return; end if;
+      Lisp.Symbols.Intern (RT.Symbols, "begin", 1, 5, RT.Known.Begin_Id, Error);
+      if Error /= Lisp.Types.Error_None then return; end if;
+      Lisp.Symbols.Intern (RT.Symbols, "atom", 1, 4, RT.Known.Atom_Id, Error);
+      if Error /= Lisp.Types.Error_None then return; end if;
+      Lisp.Symbols.Intern (RT.Symbols, "eq", 1, 2, RT.Known.Eq_Id, Error);
+      if Error /= Lisp.Types.Error_None then return; end if;
+      Lisp.Symbols.Intern (RT.Symbols, "cons", 1, 4, RT.Known.Cons_Id, Error);
+      if Error /= Lisp.Types.Error_None then return; end if;
+      Lisp.Symbols.Intern (RT.Symbols, "car", 1, 3, RT.Known.Car_Id, Error);
+      if Error /= Lisp.Types.Error_None then return; end if;
+      Lisp.Symbols.Intern (RT.Symbols, "cdr", 1, 3, RT.Known.Cdr_Id, Error);
+      if Error /= Lisp.Types.Error_None then return; end if;
+      Lisp.Symbols.Intern (RT.Symbols, "null", 1, 4, RT.Known.Null_Id, Error);
+      if Error /= Lisp.Types.Error_None then return; end if;
+      Lisp.Symbols.Intern (RT.Symbols, "+", 1, 1, RT.Known.Add_Id, Error);
+      if Error /= Lisp.Types.Error_None then return; end if;
+      Lisp.Symbols.Intern (RT.Symbols, "-", 1, 1, RT.Known.Sub_Id, Error);
+      if Error /= Lisp.Types.Error_None then return; end if;
+      Lisp.Symbols.Intern (RT.Symbols, "*", 1, 1, RT.Known.Mul_Id, Error);
+      if Error /= Lisp.Types.Error_None then return; end if;
+      Lisp.Symbols.Intern (RT.Symbols, "<", 1, 1, RT.Known.Lt_Id, Error);
+      if Error /= Lisp.Types.Error_None then return; end if;
+      Lisp.Symbols.Intern (RT.Symbols, "<=", 1, 2, RT.Known.Le_Id, Error);
+      if Error /= Lisp.Types.Error_None then return; end if;
 
-      Lisp.Store.Make_Primitive (RT.Store, Lisp.Types.Prim_Atom, Ref, Error);
-      if Error = Lisp.Types.Error_None then
-         Lisp.Env.Define_Global (RT.Env, RT.Known.Atom_Id, Ref, Error);
-      end if;
-      if Error /= Lisp.Types.Error_None then
-         return;
-      end if;
+      Bind_Primitive (RT, RT.Known.Atom_Id, Lisp.Types.Prim_Atom, Error);
+      if Error /= Lisp.Types.Error_None then return; end if;
+      Bind_Primitive (RT, RT.Known.Eq_Id, Lisp.Types.Prim_Eq, Error);
+      if Error /= Lisp.Types.Error_None then return; end if;
+      Bind_Primitive (RT, RT.Known.Cons_Id, Lisp.Types.Prim_Cons, Error);
+      if Error /= Lisp.Types.Error_None then return; end if;
+      Bind_Primitive (RT, RT.Known.Car_Id, Lisp.Types.Prim_Car, Error);
+      if Error /= Lisp.Types.Error_None then return; end if;
+      Bind_Primitive (RT, RT.Known.Cdr_Id, Lisp.Types.Prim_Cdr, Error);
+      if Error /= Lisp.Types.Error_None then return; end if;
+      Bind_Primitive (RT, RT.Known.Null_Id, Lisp.Types.Prim_Null, Error);
+      if Error /= Lisp.Types.Error_None then return; end if;
+      Bind_Primitive (RT, RT.Known.Add_Id, Lisp.Types.Prim_Add, Error);
+      if Error /= Lisp.Types.Error_None then return; end if;
+      Bind_Primitive (RT, RT.Known.Sub_Id, Lisp.Types.Prim_Sub, Error);
+      if Error /= Lisp.Types.Error_None then return; end if;
+      Bind_Primitive (RT, RT.Known.Mul_Id, Lisp.Types.Prim_Mul, Error);
+      if Error /= Lisp.Types.Error_None then return; end if;
+      Bind_Primitive (RT, RT.Known.Lt_Id, Lisp.Types.Prim_Lt, Error);
+      if Error /= Lisp.Types.Error_None then return; end if;
+      Bind_Primitive (RT, RT.Known.Le_Id, Lisp.Types.Prim_Le, Error);
+      if Error /= Lisp.Types.Error_None then return; end if;
 
-      Lisp.Store.Make_Primitive (RT.Store, Lisp.Types.Prim_Eq, Ref, Error);
-      if Error = Lisp.Types.Error_None then
-         Lisp.Env.Define_Global (RT.Env, RT.Known.Eq_Id, Ref, Error);
-      end if;
-      if Error /= Lisp.Types.Error_None then
-         return;
-      end if;
-
-      Lisp.Store.Make_Primitive (RT.Store, Lisp.Types.Prim_Cons, Ref, Error);
-      if Error = Lisp.Types.Error_None then
-         Lisp.Env.Define_Global (RT.Env, RT.Known.Cons_Id, Ref, Error);
-      end if;
-      if Error /= Lisp.Types.Error_None then
-         return;
-      end if;
-
-      Lisp.Store.Make_Primitive (RT.Store, Lisp.Types.Prim_Car, Ref, Error);
-      if Error = Lisp.Types.Error_None then
-         Lisp.Env.Define_Global (RT.Env, RT.Known.Car_Id, Ref, Error);
-      end if;
-      if Error /= Lisp.Types.Error_None then
-         return;
-      end if;
-
-      Lisp.Store.Make_Primitive (RT.Store, Lisp.Types.Prim_Cdr, Ref, Error);
-      if Error = Lisp.Types.Error_None then
-         Lisp.Env.Define_Global (RT.Env, RT.Known.Cdr_Id, Ref, Error);
-      end if;
-      if Error /= Lisp.Types.Error_None then
-         return;
-      end if;
-
-      Lisp.Store.Make_Primitive (RT.Store, Lisp.Types.Prim_Null, Ref, Error);
-      if Error = Lisp.Types.Error_None then
-         Lisp.Env.Define_Global (RT.Env, RT.Known.Null_Id, Ref, Error);
-      end if;
-      if Error /= Lisp.Types.Error_None then
-         return;
-      end if;
-
-      Lisp.Store.Make_Primitive (RT.Store, Lisp.Types.Prim_Add, Ref, Error);
-      if Error = Lisp.Types.Error_None then
-         Lisp.Env.Define_Global (RT.Env, RT.Known.Add_Id, Ref, Error);
-      end if;
-      if Error /= Lisp.Types.Error_None then
-         return;
-      end if;
-
-      Lisp.Store.Make_Primitive (RT.Store, Lisp.Types.Prim_Sub, Ref, Error);
-      if Error = Lisp.Types.Error_None then
-         Lisp.Env.Define_Global (RT.Env, RT.Known.Sub_Id, Ref, Error);
-      end if;
-      if Error /= Lisp.Types.Error_None then
-         return;
-      end if;
-
-      Lisp.Store.Make_Primitive (RT.Store, Lisp.Types.Prim_Mul, Ref, Error);
-      if Error = Lisp.Types.Error_None then
-         Lisp.Env.Define_Global (RT.Env, RT.Known.Mul_Id, Ref, Error);
-      end if;
-      if Error /= Lisp.Types.Error_None then
-         return;
-      end if;
-
-      Lisp.Store.Make_Primitive (RT.Store, Lisp.Types.Prim_Lt, Ref, Error);
-      if Error = Lisp.Types.Error_None then
-         Lisp.Env.Define_Global (RT.Env, RT.Known.Lt_Id, Ref, Error);
-      end if;
-      if Error /= Lisp.Types.Error_None then
-         return;
-      end if;
-
-      Lisp.Store.Make_Primitive (RT.Store, Lisp.Types.Prim_Le, Ref, Error);
-      if Error = Lisp.Types.Error_None then
-         Lisp.Env.Define_Global (RT.Env, RT.Known.Le_Id, Ref, Error);
-      end if;
-      if Error /= Lisp.Types.Error_None then
-         return;
-      end if;
-
-      Dummy := 0;
       Error := Lisp.Types.Error_None;
    end Initialize;
 
