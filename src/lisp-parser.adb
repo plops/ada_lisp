@@ -13,7 +13,7 @@ package body Lisp.Parser with SPARK_Mode is
       Pos      : in Positive;
       RT       : in out Lisp.Runtime.State;
       Ref      : out Lisp.Types.Cell_Ref;
-      Next_Pos : out Natural;
+      Next_Pos : out Positive;
       Error    : out Lisp.Types.Error_Code)
    with
      Pre => Lisp.Symbols.Valid (RT.Symbols)
@@ -33,14 +33,15 @@ package body Lisp.Parser with SPARK_Mode is
      (Source   : in String;
       Pos      : in Positive;
       Item     : out Lisp.Lexer.Token;
-      Next_Pos : out Natural)
+      Next_Pos : out Positive)
    with
      Pre => Source'First = 1
        and then Pos in Source'Range
        and then Source'Last < Natural'Last,
-     Post => Next_Pos > 0
+     Post => Next_Pos in Pos .. Source'Last + 1
        and then Item.First > 0
-       and then Item.Last in Item.First .. Source'Last + 1;
+       and then Item.Last in Item.First .. Source'Last + 1
+       and then (if Item.Kind /= Lisp.Lexer.Tok_EOF then Item.First in Source'Range);
 
    procedure Intern_Symbol
      (RT      : in out Lisp.Runtime.State;
@@ -119,7 +120,7 @@ package body Lisp.Parser with SPARK_Mode is
      (Source   : in String;
       Pos      : in Positive;
       Item     : out Lisp.Lexer.Token;
-      Next_Pos : out Natural) is
+      Next_Pos : out Positive) is
    begin
       Lisp.Lexer.Next_Token (Source, Pos, Item, Next_Pos);
    end Scan_Token;
@@ -168,7 +169,7 @@ package body Lisp.Parser with SPARK_Mode is
       Pos      : in Positive;
       RT       : in out Lisp.Runtime.State;
       Ref      : out Lisp.Types.Cell_Ref;
-      Next_Pos : out Natural;
+      Next_Pos : out Positive;
       Error    : out Lisp.Types.Error_Code)
    with
      Pre => Lisp.Symbols.Valid (RT.Symbols)
@@ -262,7 +263,7 @@ package body Lisp.Parser with SPARK_Mode is
       Pos      : in Positive;
       RT       : in out Lisp.Runtime.State;
       Ref      : out Lisp.Types.Cell_Ref;
-      Next_Pos : out Natural;
+      Next_Pos : out Positive;
       Error    : out Lisp.Types.Error_Code) is
       Tok       : Lisp.Lexer.Token;
       Cursor    : Positive := Pos;
@@ -347,7 +348,9 @@ package body Lisp.Parser with SPARK_Mode is
       Ref      : out Lisp.Types.Cell_Ref;
       Next_Pos : out Natural;
       Error    : out Lisp.Types.Error_Code) is
+      Cursor : Positive;
    begin
-      Parse_Expr (Source, Pos, RT, Ref, Next_Pos, Error);
+      Parse_Expr (Source, Pos, RT, Ref, Cursor, Error);
+      Next_Pos := Natural (Cursor);
    end Parse_One;
 end Lisp.Parser;

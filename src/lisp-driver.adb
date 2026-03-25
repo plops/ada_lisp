@@ -12,7 +12,9 @@ package body Lisp.Driver with SPARK_Mode is
    use type Lisp.Types.Error_Code;
    use type Lisp.Lexer.Token_Kind;
 
-   function To_One_Based (Source : String) return String is
+   function To_One_Based (Source : String) return String
+   with
+     Pre => Source'Length > 0 is
       Result : String (1 .. Source'Length) := (others => ' ');
    begin
       for I in Source'Range loop
@@ -29,7 +31,7 @@ package body Lisp.Driver with SPARK_Mode is
       Expr     : Lisp.Types.Cell_Ref;
       Result   : Lisp.Types.Cell_Ref;
       Next_Pos : Natural;
-      Dummy_Pos : Natural;
+      Dummy_Pos : Positive;
       Tok      : Lisp.Lexer.Token;
    begin
       if Source'Length = 0 then
@@ -37,7 +39,7 @@ package body Lisp.Driver with SPARK_Mode is
          return;
       end if;
       declare
-         Normalized : constant String (1 .. Source'Length) := To_One_Based (Source);
+         Normalized : constant String := To_One_Based (Source);
       begin
          Lisp.Runtime.Initialize (RT, Error);
          if Error /= Lisp.Types.Error_None then

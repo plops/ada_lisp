@@ -13,8 +13,8 @@ package body Lisp.Lexer with SPARK_Mode is
      (Source   : in String;
       Pos      : in Positive;
       Item     : out Token;
-      Next_Pos : out Natural) is
-      I     : Natural := Pos;
+      Next_Pos : out Positive) is
+      I     : Positive := Pos;
       Value : Long_Long_Integer := 0;
       Sign  : Long_Long_Integer := 1;
       Max_Abs_Int : constant Long_Long_Integer :=
@@ -55,7 +55,7 @@ package body Lisp.Lexer with SPARK_Mode is
                Next_Pos := I + 1;
             else
                declare
-                  J : Natural := I;
+                  J : Positive := I;
                begin
                   while J <= Source'Last and then not Is_Delimiter (Source (J)) and then Source (J) /= ')' loop
                      pragma Loop_Invariant (J in I .. Source'Last + 1);
@@ -82,7 +82,7 @@ package body Lisp.Lexer with SPARK_Mode is
 
       if Is_Digit (Source (I)) then
          declare
-            J : Natural := I;
+            J : Positive := I;
             Digit : Long_Long_Integer;
          begin
             while J <= Source'Last and then Is_Digit (Source (J)) loop
@@ -119,7 +119,7 @@ package body Lisp.Lexer with SPARK_Mode is
       end if;
 
       declare
-         J : Natural := I;
+         J : Positive := I;
       begin
          while J <= Source'Last and then not Is_Delimiter (Source (J)) and then Source (J) /= ')' loop
             pragma Loop_Invariant (J in I .. Source'Last + 1);
