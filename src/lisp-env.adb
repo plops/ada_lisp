@@ -13,64 +13,6 @@ package body Lisp.Env with SPARK_Mode is
                Values => (others => Lisp.Types.No_Ref))));
    end Initialize;
 
-   function Name_Not_In_Tail
-     (Env_State : State;
-      Frame     : Positive;
-      Index     : Positive;
-      Probe     : Lisp.Types.Symbol_Id) return Boolean is
-   begin
-      if Index > Env_State.Frames (Frame).Count then
-         return True;
-      else
-         return Env_State.Frames (Frame).Names (Index) /= Probe
-           and then Name_Not_In_Tail (Env_State, Frame, Index + 1, Probe);
-      end if;
-   end Name_Not_In_Tail;
-
-   function Frame_Names_Unique
-     (Env_State : State;
-      Frame     : Positive;
-      Index     : Positive) return Boolean is
-   begin
-      if Index > Env_State.Frames (Frame).Count then
-         return True;
-      else
-         return Name_Not_In_Tail
-             (Env_State,
-              Frame,
-              Index + 1,
-              Env_State.Frames (Frame).Names (Index))
-           and then Frame_Names_Unique (Env_State, Frame, Index + 1);
-      end if;
-   end Frame_Names_Unique;
-
-   function All_Names_Unique
-     (Env_State : State;
-      Frame     : Natural) return Boolean is
-   begin
-      if Frame = 0 then
-         return True;
-      elsif Frame >= Env_State.Next_Free then
-         return True;
-      else
-         return Frame_Names_Unique (Env_State, Positive (Frame), 1)
-           and then All_Names_Unique (Env_State, Frame + 1);
-      end if;
-   end All_Names_Unique;
-
-   function Parents_Valid
-     (Env_State : State;
-      Frame     : Natural) return Boolean is
-   begin
-      if Frame >= Env_State.Next_Free then
-         return True;
-      else
-         return Env_State.Frames (Positive (Frame)).Parent /= Lisp.Types.No_Frame
-           and then Env_State.Frames (Positive (Frame)).Parent < Frame
-           and then Parents_Valid (Env_State, Frame + 1);
-      end if;
-   end Parents_Valid;
-
    function Frame_Count (Env_State : State) return Natural is (Env_State.Next_Free - 1);
 
    procedure Lookup

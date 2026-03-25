@@ -13,7 +13,10 @@ package body Lisp.Parser with SPARK_Mode is
       RT       : in out Lisp.Runtime.State;
       Ref      : out Lisp.Types.Cell_Ref;
       Next_Pos : out Natural;
-      Error    : out Lisp.Types.Error_Code);
+      Error    : out Lisp.Types.Error_Code)
+   with
+     Pre => Lisp.Runtime.Valid (RT),
+     Post => Lisp.Runtime.Valid (RT);
 
    procedure Make_List
      (RT         : in out Lisp.Runtime.State;
@@ -52,6 +55,9 @@ package body Lisp.Parser with SPARK_Mode is
       Elem_Ref  : Lisp.Types.Cell_Ref := Lisp.Types.No_Ref;
    begin
       loop
+         pragma Loop_Invariant (Lisp.Runtime.Valid (RT));
+         pragma Loop_Invariant (Count <= Lisp.Config.Max_List_Elements);
+         pragma Loop_Invariant (Cursor >= Pos);
          Lisp.Lexer.Next_Token (Source, Positive (Cursor), Tok, Cursor);
          case Tok.Kind is
             when Lisp.Lexer.Tok_RParen =>

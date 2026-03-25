@@ -15,12 +15,59 @@ package body Lisp.Eval with SPARK_Mode is
       List_Ref    : in Lisp.Types.Cell_Ref;
       Elements    : out Lisp.Types.Cell_Ref_Array;
       Count       : out Natural;
+      Error       : out Lisp.Types.Error_Code)
+   with
+     Pre => Lisp.Runtime.Valid (RT),
+     Post => Lisp.Runtime.Valid (RT);
+
+   procedure Params_To_Array
+     (RT       : in Lisp.Runtime.State;
+      List_Ref : in Lisp.Types.Cell_Ref;
+      Names    : out Lisp.Types.Symbol_Id_Array;
+      Count    : out Natural;
+      Error    : out Lisp.Types.Error_Code)
+   with
+     Pre => Lisp.Runtime.Valid (RT),
+     Post => Lisp.Runtime.Valid (RT);
+
+   procedure Eval_List
+     (RT            : in out Lisp.Runtime.State;
+      Current_Frame : in Lisp.Types.Frame_Id;
+      List_Ref      : in Lisp.Types.Cell_Ref;
+      Fuel          : in Lisp.Types.Fuel_Count;
+      Values        : out Lisp.Types.Cell_Ref_Array;
+      Count         : out Natural;
+      Error         : out Lisp.Types.Error_Code)
+   with
+     Pre => Lisp.Runtime.Valid (RT),
+     Post => Lisp.Runtime.Valid (RT),
+     Subprogram_Variant => (Decreases => Fuel);
+
+   procedure Eval_Begin
+     (RT            : in out Lisp.Runtime.State;
+      Current_Frame : in Lisp.Types.Frame_Id;
+      Forms         : in Lisp.Types.Cell_Ref;
+      Fuel          : in Lisp.Types.Fuel_Count;
+      Result_Ref    : out Lisp.Types.Cell_Ref;
+      Error         : out Lisp.Types.Error_Code)
+   with
+     Pre => Lisp.Runtime.Valid (RT),
+     Post => Lisp.Runtime.Valid (RT),
+     Subprogram_Variant => (Decreases => Fuel);
+
+   procedure Proper_List_To_Array
+     (RT          : in Lisp.Runtime.State;
+      List_Ref    : in Lisp.Types.Cell_Ref;
+      Elements    : out Lisp.Types.Cell_Ref_Array;
+      Count       : out Natural;
       Error       : out Lisp.Types.Error_Code) is
       Cursor : Lisp.Types.Cell_Ref := List_Ref;
    begin
       Elements := (others => Lisp.Types.No_Ref);
       Count := 0;
       while Cursor /= Lisp.Store.Nil_Ref loop
+         pragma Loop_Invariant (Lisp.Runtime.Valid (RT));
+         pragma Loop_Invariant (Count <= Elements'Length);
          if Lisp.Store.Kind_Of (RT.Store, Cursor) /= Lisp.Types.Cons_Cell then
             Error := Lisp.Types.Error_Syntax;
             return;
@@ -85,7 +132,12 @@ package body Lisp.Eval with SPARK_Mode is
       if Error /= Lisp.Types.Error_None then
          return;
       end if;
+      if Count > 0 and then Fuel = 0 then
+         Error := Lisp.Types.Error_Out_Of_Fuel;
+         return;
+      end if;
       for I in 1 .. Count loop
+         pragma Loop_Invariant (Lisp.Runtime.Valid (RT));
          Eval (RT, Current_Frame, Exprs (I), Fuel - 1, Values (I), Error);
          if Error /= Lisp.Types.Error_None then
             return;
@@ -109,8 +161,13 @@ package body Lisp.Eval with SPARK_Mode is
          Error := Lisp.Types.Error_None;
          return;
       end if;
+      if Fuel = 0 then
+         Error := Lisp.Types.Error_Out_Of_Fuel;
+         return;
+      end if;
 
       while Cursor /= Lisp.Store.Nil_Ref loop
+         pragma Loop_Invariant (Lisp.Runtime.Valid (RT));
          if Lisp.Store.Kind_Of (RT.Store, Cursor) /= Lisp.Types.Cons_Cell then
             Result_Ref := Lisp.Types.No_Ref;
             Error := Lisp.Types.Error_Syntax;
@@ -220,7 +277,7 @@ package body Lisp.Eval with SPARK_Mode is
                   end if;
                   return;
                elsif Name_Id = RT.Known.Begin_Id then
-                  Eval_Begin (RT, Current_Frame, Args_List, Fuel, Result_Ref, Error);
+                  Eval_Begin (RT, Current_Frame, Args_List, Fuel - 1, Result_Ref, Error);
                   return;
                elsif Name_Id = RT.Known.Lambda_Id then
                   if Lisp.Store.Kind_Of (RT.Store, Args_List) /= Lisp.Types.Cons_Cell then
@@ -296,7 +353,7 @@ package body Lisp.Eval with SPARK_Mode is
                Result_Ref := Lisp.Types.No_Ref;
                return;
             end if;
-            Eval_List (RT, Current_Frame, Args_List, Fuel, Arg_Values, Arg_Count, Error);
+            Eval_List (RT, Current_Frame, Args_List, Fuel - 1, Arg_Values, Arg_Count, Error);
             if Error /= Lisp.Types.Error_None then
                Result_Ref := Lisp.Types.No_Ref;
                return;

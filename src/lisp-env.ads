@@ -55,44 +55,31 @@ private
       Frames    : Frame_Array;
    end record;
 
-   function Name_Not_In_Tail
+   function Frame_Parent_Valid
+     (Env_State : State;
+      Frame     : Positive) return Boolean is
+     (Env_State.Frames (Frame).Parent /= Lisp.Types.No_Frame
+      and then Env_State.Frames (Frame).Parent < Frame);
+
+   function Binding_Name_Unique
      (Env_State : State;
       Frame     : Positive;
-      Index     : Positive;
-      Probe     : Lisp.Types.Symbol_Id) return Boolean
-   with
-     Pre => Frame in Env_State.Frames'Range,
-     Subprogram_Variant =>
-       (Decreases => Lisp.Config.Max_Frame_Bindings - Index);
+      Index     : Binding_Index) return Boolean is
+     (for all J in Index + 1 .. Env_State.Frames (Frame).Count =>
+        Env_State.Frames (Frame).Names (Index) /= Env_State.Frames (Frame).Names (J));
 
    function Frame_Names_Unique
      (Env_State : State;
-      Frame     : Positive;
-      Index     : Positive) return Boolean
-   with
-     Pre => Frame in Env_State.Frames'Range,
-     Subprogram_Variant =>
-       (Decreases => Lisp.Config.Max_Frame_Bindings - Index);
-
-   function All_Names_Unique
-     (Env_State : State;
-      Frame     : Natural) return Boolean
-   with
-     Subprogram_Variant =>
-       (Decreases => Lisp.Config.Max_Frames + 1 - Frame);
-
-   function Parents_Valid
-     (Env_State : State;
-      Frame     : Natural) return Boolean
-   with
-     Pre => Frame = 0 or else Frame in Env_State.Frames'Range,
-     Subprogram_Variant =>
-       (Decreases => Lisp.Config.Max_Frames + 1 - Frame);
+      Frame     : Positive) return Boolean is
+     (for all I in 1 .. Env_State.Frames (Frame).Count =>
+        Binding_Name_Unique (Env_State, Frame, I));
 
    function Valid (Env_State : State) return Boolean is
      (Env_State.Next_Free >= 2
       and then Env_State.Next_Free <= Lisp.Config.Max_Frames + 1
       and then Env_State.Frames (1).Parent = Lisp.Types.No_Frame
-      and then Parents_Valid (Env_State, 2)
-      and then All_Names_Unique (Env_State, 1));
+      and then (for all F in 2 .. Env_State.Next_Free - 1 =>
+                  Frame_Parent_Valid (Env_State, F))
+      and then (for all F in 1 .. Env_State.Next_Free - 1 =>
+                  Frame_Names_Unique (Env_State, F)));
 end Lisp.Env;

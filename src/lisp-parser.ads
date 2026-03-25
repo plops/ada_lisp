@@ -8,5 +8,8 @@ package Lisp.Parser with SPARK_Mode is
       RT       : in out Lisp.Runtime.State;
       Ref      : out Lisp.Types.Cell_Ref;
       Next_Pos : out Natural;
-      Error    : out Lisp.Types.Error_Code);
+      Error    : out Lisp.Types.Error_Code)
+   with
+     Pre => Lisp.Runtime.Valid (RT),
+     Post => Lisp.Runtime.Valid (RT);
 end Lisp.Parser;
