@@ -26,12 +26,15 @@ package body Lisp.Lexer with SPARK_Mode is
          pragma Loop_Invariant (I in Pos .. Source'Last + 1);
          I := I + 1;
       end loop;
+      pragma Assert (I in Pos .. Source'Last + 1);
 
       if I > Source'Last then
          Item := (Kind => Tok_EOF, First => I, Last => I, Int_Value => 0);
          Next_Pos := I;
          return;
       end if;
+
+      pragma Assert (I in Source'Range);
 
       case Source (I) is
          when '(' =>
@@ -58,6 +61,7 @@ package body Lisp.Lexer with SPARK_Mode is
                      pragma Loop_Invariant (J in I .. Source'Last + 1);
                      J := J + 1;
                   end loop;
+                  pragma Assert (J in I .. Source'Last + 1);
                   Item := (Kind => Tok_Symbol, First => I, Last => J - 1, Int_Value => 0);
                   Next_Pos := J;
                end;
@@ -97,6 +101,7 @@ package body Lisp.Lexer with SPARK_Mode is
             end loop;
 
             pragma Assert (J >= I + 1);
+            pragma Assert (J in I + 1 .. Source'Last + 1);
             Value := Value * Sign;
             if Value < Long_Long_Integer (Lisp.Config.Min_Int)
               or else Value > Long_Long_Integer (Lisp.Config.Max_Int)
@@ -120,6 +125,7 @@ package body Lisp.Lexer with SPARK_Mode is
             pragma Loop_Invariant (J in I .. Source'Last + 1);
             J := J + 1;
          end loop;
+         pragma Assert (J in I .. Source'Last + 1);
 
          if J = I then
             Item := (Kind => Tok_Bad, First => I, Last => I, Int_Value => 0);

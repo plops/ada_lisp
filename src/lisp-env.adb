@@ -45,7 +45,14 @@ package body Lisp.Env with SPARK_Mode is
       Error     : out Lisp.Types.Error_Code) is
    begin
       for I in 1 .. Env_State.Frames (1).Count loop
-         pragma Loop_Invariant (Valid (Env_State));
+         pragma Loop_Invariant (Env_State.Next_Free in 2 .. Lisp.Config.Max_Frames + 1);
+         pragma Loop_Invariant (Env_State.Frames (1).Parent = Lisp.Types.No_Frame);
+         pragma Loop_Invariant
+           ((for all F in 2 .. Env_State.Next_Free - 1 => Frame_Parent_Valid (Env_State, F)));
+         pragma Loop_Invariant
+           ((for all F in 2 .. Env_State.Next_Free - 1 => Frame_Names_Unique (Env_State, F)));
+         pragma Loop_Invariant
+           ((for all J in 1 .. I - 1 => Env_State.Frames (1).Names (J) /= Name));
          if Env_State.Frames (1).Names (I) = Name then
             Env_State.Frames (1).Values (I) := Value;
             Error := Lisp.Types.Error_None;
@@ -107,8 +114,18 @@ package body Lisp.Env with SPARK_Mode is
       Env_State.Frames (Positive (Frame)).Parent := Parent;
       Env_State.Frames (Positive (Frame)).Count := Names'Length;
       for I in Names'Range loop
+         pragma Loop_Invariant (Env_State.Next_Free in 3 .. Lisp.Config.Max_Frames + 1);
+         pragma Loop_Invariant (Env_State.Frames (1).Parent = Lisp.Types.No_Frame);
+         pragma Loop_Invariant
+           ((for all F in 2 .. Frame - 1 => Frame_Parent_Valid (Env_State, F)));
+         pragma Loop_Invariant
+           ((for all F in 1 .. Frame - 1 => Frame_Names_Unique (Env_State, F)));
          pragma Loop_Invariant (Env_State.Frames (Positive (Frame)).Parent = Parent);
          pragma Loop_Invariant (Env_State.Frames (Positive (Frame)).Count = Names'Length);
+         pragma Loop_Invariant
+           ((for all J in 1 .. I - 1 =>
+               Env_State.Frames (Positive (Frame)).Names (J) = Names (J)
+               and then Env_State.Frames (Positive (Frame)).Values (J) = Values (J)));
          Env_State.Frames (Positive (Frame)).Names (I) := Names (I);
          Env_State.Frames (Positive (Frame)).Values (I) := Values (I);
       end loop;

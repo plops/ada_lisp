@@ -1,4 +1,5 @@
 with Lisp.Config;
+with Lisp.Env;
 with Lisp.Lexer;
 with Lisp.Store;
 with Lisp.Symbols;
@@ -15,8 +16,76 @@ package body Lisp.Parser with SPARK_Mode is
       Next_Pos : out Natural;
       Error    : out Lisp.Types.Error_Code)
    with
-     Pre => Lisp.Runtime.Valid (RT),
-     Post => Lisp.Runtime.Valid (RT);
+     Pre => Lisp.Symbols.Valid (RT.Symbols)
+       and then Lisp.Store.Valid (RT.Store)
+       and then Lisp.Env.Valid (RT.Env)
+       and then Source'First = 1
+       and then Pos in Source'Range
+       and then Source'Last < Natural'Last,
+     Post => Next_Pos > 0
+       and then
+       (if Lisp.Types."=" (Error, Lisp.Types.Error_None) then
+           Lisp.Symbols.Valid (RT.Symbols)
+           and then Lisp.Store.Valid (RT.Store)
+           and then Lisp.Env.Valid (RT.Env));
+
+   procedure Scan_Token
+     (Source   : in String;
+      Pos      : in Positive;
+      Item     : out Lisp.Lexer.Token;
+      Next_Pos : out Natural)
+   with
+     Pre => Source'First = 1
+       and then Pos in Source'Range
+       and then Source'Last < Natural'Last,
+     Post => Next_Pos > 0
+       and then Item.First > 0
+       and then Item.Last in Item.First .. Source'Last + 1;
+
+   procedure Intern_Symbol
+     (RT      : in out Lisp.Runtime.State;
+      Source  : in String;
+      First   : in Positive;
+      Last    : in Natural;
+      Sym_Id  : out Lisp.Types.Symbol_Id;
+      Error   : out Lisp.Types.Error_Code)
+   with
+     Pre => Lisp.Symbols.Valid (RT.Symbols)
+       and then Lisp.Store.Valid (RT.Store)
+       and then Source'First = 1
+       and then First in Source'Range
+       and then Last in First .. Source'Last,
+     Post => (if Lisp.Types."=" (Error, Lisp.Types.Error_None) then
+                 Lisp.Symbols.Valid (RT.Symbols)
+                 and then Lisp.Store.Valid (RT.Store));
+
+   procedure Make_Integer_Cell
+     (RT    : in out Lisp.Runtime.State;
+      Value : in Lisp.Types.Lisp_Int;
+      Ref   : out Lisp.Types.Cell_Ref;
+      Error : out Lisp.Types.Error_Code)
+   with
+     Pre => Lisp.Store.Valid (RT.Store),
+     Post => (if Lisp.Types."=" (Error, Lisp.Types.Error_None) then Lisp.Store.Valid (RT.Store));
+
+   procedure Make_Symbol_Cell
+     (RT    : in out Lisp.Runtime.State;
+      Value : in Lisp.Types.Symbol_Id;
+      Ref   : out Lisp.Types.Cell_Ref;
+      Error : out Lisp.Types.Error_Code)
+   with
+     Pre => Lisp.Store.Valid (RT.Store),
+     Post => (if Lisp.Types."=" (Error, Lisp.Types.Error_None) then Lisp.Store.Valid (RT.Store));
+
+   procedure Make_Cons_Cell
+     (RT    : in out Lisp.Runtime.State;
+      Left  : in Lisp.Types.Cell_Ref;
+      Right : in Lisp.Types.Cell_Ref;
+      Ref   : out Lisp.Types.Cell_Ref;
+      Error : out Lisp.Types.Error_Code)
+   with
+     Pre => Lisp.Store.Valid (RT.Store),
+     Post => (if Lisp.Types."=" (Error, Lisp.Types.Error_None) then Lisp.Store.Valid (RT.Store));
 
    procedure Make_List
      (RT         : in out Lisp.Runtime.State;
@@ -24,11 +93,18 @@ package body Lisp.Parser with SPARK_Mode is
       Elem_Count : in Natural;
       Tail       : in Lisp.Types.Cell_Ref;
       Ref        : out Lisp.Types.Cell_Ref;
-      Error      : out Lisp.Types.Error_Code) is
+      Error      : out Lisp.Types.Error_Code)
+   with
+     Pre  => Lisp.Store.Valid (RT.Store)
+       and then Elem_Count <= Elements'Length,
+     Post => (if Lisp.Types."=" (Error, Lisp.Types.Error_None) then Lisp.Store.Valid (RT.Store)) is
       Result : Lisp.Types.Cell_Ref := Tail;
    begin
       for I in reverse 1 .. Elem_Count loop
-         Lisp.Store.Make_Cons (RT.Store, Elements (I), Result, Result, Error);
+         pragma Loop_Invariant (Lisp.Store.Valid (RT.Store));
+         pragma Loop_Invariant (Elem_Count <= Elements'Length);
+         pragma Loop_Invariant (I in 1 .. Elem_Count);
+         Make_Cons_Cell (RT, Elements (I), Result, Result, Error);
          if Error /= Lisp.Types.Error_None then
             Ref := Lisp.Types.No_Ref;
             return;
@@ -36,8 +112,56 @@ package body Lisp.Parser with SPARK_Mode is
       end loop;
 
       Ref := Result;
-      Error := Lisp.Types.Error_None;
+     Error := Lisp.Types.Error_None;
    end Make_List;
+
+   procedure Scan_Token
+     (Source   : in String;
+      Pos      : in Positive;
+      Item     : out Lisp.Lexer.Token;
+      Next_Pos : out Natural) is
+   begin
+      Lisp.Lexer.Next_Token (Source, Pos, Item, Next_Pos);
+   end Scan_Token;
+
+   procedure Intern_Symbol
+     (RT      : in out Lisp.Runtime.State;
+      Source  : in String;
+      First   : in Positive;
+      Last    : in Natural;
+      Sym_Id  : out Lisp.Types.Symbol_Id;
+      Error   : out Lisp.Types.Error_Code) is
+   begin
+      Lisp.Symbols.Intern (RT.Symbols, Source, First, Last, Sym_Id, Error);
+   end Intern_Symbol;
+
+   procedure Make_Integer_Cell
+     (RT    : in out Lisp.Runtime.State;
+      Value : in Lisp.Types.Lisp_Int;
+      Ref   : out Lisp.Types.Cell_Ref;
+      Error : out Lisp.Types.Error_Code) is
+   begin
+      Lisp.Store.Make_Integer (RT.Store, Value, Ref, Error);
+   end Make_Integer_Cell;
+
+   procedure Make_Symbol_Cell
+     (RT    : in out Lisp.Runtime.State;
+      Value : in Lisp.Types.Symbol_Id;
+      Ref   : out Lisp.Types.Cell_Ref;
+      Error : out Lisp.Types.Error_Code) is
+   begin
+      Lisp.Store.Make_Symbol (RT.Store, Value, Ref, Error);
+   end Make_Symbol_Cell;
+
+   procedure Make_Cons_Cell
+     (RT    : in out Lisp.Runtime.State;
+      Left  : in Lisp.Types.Cell_Ref;
+      Right : in Lisp.Types.Cell_Ref;
+      Ref   : out Lisp.Types.Cell_Ref;
+      Error : out Lisp.Types.Error_Code) is
+   begin
+      Lisp.Store.Make_Cons (RT.Store, Left, Right, Ref, Error);
+   end Make_Cons_Cell;
 
    procedure Parse_List
      (Source   : in String;
@@ -45,9 +169,22 @@ package body Lisp.Parser with SPARK_Mode is
       RT       : in out Lisp.Runtime.State;
       Ref      : out Lisp.Types.Cell_Ref;
       Next_Pos : out Natural;
-      Error    : out Lisp.Types.Error_Code) is
+      Error    : out Lisp.Types.Error_Code)
+   with
+     Pre => Lisp.Symbols.Valid (RT.Symbols)
+       and then Lisp.Store.Valid (RT.Store)
+       and then Lisp.Env.Valid (RT.Env)
+       and then Source'First = 1
+       and then Pos in Source'Range
+       and then Source'Last < Natural'Last,
+     Post => Next_Pos > 0
+       and then
+       (if Lisp.Types."=" (Error, Lisp.Types.Error_None) then
+           Lisp.Symbols.Valid (RT.Symbols)
+           and then Lisp.Store.Valid (RT.Store)
+           and then Lisp.Env.Valid (RT.Env)) is
       Tok       : Lisp.Lexer.Token;
-      Cursor    : Natural := Pos;
+      Cursor    : Positive := Pos;
       Elements  : Lisp.Types.Cell_Ref_Array (1 .. Lisp.Config.Max_List_Elements) := (others => Lisp.Types.No_Ref);
       Count     : Natural := 0;
       Tail      : Lisp.Types.Cell_Ref := Lisp.Store.Nil_Ref;
@@ -55,10 +192,18 @@ package body Lisp.Parser with SPARK_Mode is
       Elem_Ref  : Lisp.Types.Cell_Ref := Lisp.Types.No_Ref;
    begin
       loop
-         pragma Loop_Invariant (Lisp.Runtime.Valid (RT));
+         pragma Loop_Invariant (Lisp.Symbols.Valid (RT.Symbols));
+         pragma Loop_Invariant (Lisp.Store.Valid (RT.Store));
+         pragma Loop_Invariant (Lisp.Env.Valid (RT.Env));
          pragma Loop_Invariant (Count <= Lisp.Config.Max_List_Elements);
-         pragma Loop_Invariant (Cursor >= Pos);
-         Lisp.Lexer.Next_Token (Source, Positive (Cursor), Tok, Cursor);
+         pragma Loop_Invariant (Cursor in Pos .. Source'Last + 1);
+         if Cursor > Source'Last then
+            Ref := Lisp.Types.No_Ref;
+            Next_Pos := Cursor;
+            Error := Lisp.Types.Error_Syntax;
+            return;
+         end if;
+         Scan_Token (Source, Cursor, Tok, Cursor);
          case Tok.Kind is
             when Lisp.Lexer.Tok_RParen =>
                Make_List (RT, Elements, Count, Tail, Ref, Error);
@@ -71,14 +216,14 @@ package body Lisp.Parser with SPARK_Mode is
                   Error := Lisp.Types.Error_Syntax;
                   return;
                end if;
-               Parse_Expr (Source, Positive (Cursor), RT, Tail, Cursor, Error);
+               Parse_Expr (Source, Cursor, RT, Tail, Cursor, Error);
                if Error /= Lisp.Types.Error_None then
                   Ref := Lisp.Types.No_Ref;
                   Next_Pos := Cursor;
                   return;
                end if;
                Dotted := True;
-               Lisp.Lexer.Next_Token (Source, Positive (Cursor), Tok, Cursor);
+               Scan_Token (Source, Cursor, Tok, Cursor);
                if Tok.Kind /= Lisp.Lexer.Tok_RParen then
                   Ref := Lisp.Types.No_Ref;
                   Next_Pos := Cursor;
@@ -120,16 +265,15 @@ package body Lisp.Parser with SPARK_Mode is
       Next_Pos : out Natural;
       Error    : out Lisp.Types.Error_Code) is
       Tok       : Lisp.Lexer.Token;
-      Cursor    : Natural;
+      Cursor    : Positive := Pos;
       Sym_Id    : Lisp.Types.Symbol_Id := 0;
-      Sym_Ref   : Lisp.Types.Cell_Ref := Lisp.Types.No_Ref;
       Quote_Ref : Lisp.Types.Cell_Ref := Lisp.Types.No_Ref;
       Tail_Ref  : Lisp.Types.Cell_Ref := Lisp.Types.No_Ref;
    begin
-      Lisp.Lexer.Next_Token (Source, Pos, Tok, Cursor);
+      Scan_Token (Source, Pos, Tok, Cursor);
       case Tok.Kind is
          when Lisp.Lexer.Tok_Integer =>
-            Lisp.Store.Make_Integer (RT.Store, Tok.Int_Value, Ref, Error);
+            Make_Integer_Cell (RT, Tok.Int_Value, Ref, Error);
             Next_Pos := Cursor;
          when Lisp.Lexer.Tok_Nil =>
             Ref := Lisp.Store.Nil_Ref;
@@ -140,36 +284,48 @@ package body Lisp.Parser with SPARK_Mode is
             Next_Pos := Cursor;
             Error := Lisp.Types.Error_None;
          when Lisp.Lexer.Tok_Symbol =>
-            Lisp.Symbols.Intern (RT.Symbols, Source, Tok.First, Tok.Last, Sym_Id, Error);
+            Intern_Symbol (RT, Source, Tok.First, Tok.Last, Sym_Id, Error);
             if Error = Lisp.Types.Error_None then
-               Lisp.Store.Make_Symbol (RT.Store, Sym_Id, Ref, Error);
+               Make_Symbol_Cell (RT, Sym_Id, Ref, Error);
             else
                Ref := Lisp.Types.No_Ref;
             end if;
             Next_Pos := Cursor;
          when Lisp.Lexer.Tok_Quote =>
-            Parse_Expr (Source, Positive (Cursor), RT, Tail_Ref, Cursor, Error);
+            if Cursor > Source'Last then
+               Ref := Lisp.Types.No_Ref;
+               Next_Pos := Cursor;
+               Error := Lisp.Types.Error_Syntax;
+               return;
+            end if;
+            Parse_Expr (Source, Cursor, RT, Tail_Ref, Cursor, Error);
             if Error /= Lisp.Types.Error_None then
                Ref := Lisp.Types.No_Ref;
                Next_Pos := Cursor;
                return;
             end if;
-            Lisp.Store.Make_Symbol (RT.Store, RT.Known.Quote_Id, Quote_Ref, Error);
+            Make_Symbol_Cell (RT, RT.Known.Quote_Id, Quote_Ref, Error);
             if Error /= Lisp.Types.Error_None then
                Ref := Lisp.Types.No_Ref;
                Next_Pos := Cursor;
                return;
             end if;
-            Lisp.Store.Make_Cons (RT.Store, Tail_Ref, Lisp.Store.Nil_Ref, Tail_Ref, Error);
+            Make_Cons_Cell (RT, Tail_Ref, Lisp.Store.Nil_Ref, Tail_Ref, Error);
             if Error /= Lisp.Types.Error_None then
                Ref := Lisp.Types.No_Ref;
                Next_Pos := Cursor;
                return;
             end if;
-            Lisp.Store.Make_Cons (RT.Store, Quote_Ref, Tail_Ref, Ref, Error);
+            Make_Cons_Cell (RT, Quote_Ref, Tail_Ref, Ref, Error);
             Next_Pos := Cursor;
          when Lisp.Lexer.Tok_LParen =>
-            Lisp.Lexer.Next_Token (Source, Positive (Cursor), Tok, Cursor);
+            if Cursor > Source'Last then
+               Ref := Lisp.Types.No_Ref;
+               Next_Pos := Cursor;
+               Error := Lisp.Types.Error_Syntax;
+               return;
+            end if;
+            Scan_Token (Source, Cursor, Tok, Cursor);
             if Tok.Kind = Lisp.Lexer.Tok_RParen then
                Ref := Lisp.Store.Nil_Ref;
                Next_Pos := Cursor;

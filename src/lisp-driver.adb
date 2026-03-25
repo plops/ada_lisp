@@ -4,6 +4,8 @@ with Lisp.Lexer;
 with Lisp.Parser;
 with Lisp.Printer;
 with Lisp.Runtime;
+with Lisp.Store;
+with Lisp.Symbols;
 with Lisp.Config;
 
 package body Lisp.Driver with SPARK_Mode is
@@ -23,7 +25,6 @@ package body Lisp.Driver with SPARK_Mode is
      (Source : in String;
       Buffer : in out Lisp.Text_Buffers.Buffer;
       Error  : out Lisp.Types.Error_Code) is
-      Normalized : constant String := To_One_Based (Source);
       RT       : Lisp.Runtime.State;
       Expr     : Lisp.Types.Cell_Ref;
       Result   : Lisp.Types.Cell_Ref;
@@ -31,37 +32,44 @@ package body Lisp.Driver with SPARK_Mode is
       Dummy_Pos : Natural;
       Tok      : Lisp.Lexer.Token;
    begin
-      if Normalized'Length = 0 then
+      if Source'Length = 0 then
          Error := Lisp.Types.Error_Syntax;
          return;
       end if;
+      declare
+         Normalized : constant String (1 .. Source'Length) := To_One_Based (Source);
+      begin
+         Lisp.Runtime.Initialize (RT, Error);
+         if Error /= Lisp.Types.Error_None then
+            return;
+         end if;
 
-      Lisp.Runtime.Initialize (RT, Error);
-      if Error /= Lisp.Types.Error_None then
-         return;
-      end if;
+         Lisp.Parser.Parse_One (Normalized, 1, RT, Expr, Next_Pos, Error);
+         if Error /= Lisp.Types.Error_None then
+            return;
+         end if;
 
-      Lisp.Parser.Parse_One (Normalized, 1, RT, Expr, Next_Pos, Error);
-      if Error /= Lisp.Types.Error_None then
-         return;
-      end if;
+         if Next_Pos = 0 then
+            Error := Lisp.Types.Error_Syntax;
+            return;
+         end if;
 
-      if Next_Pos = 0 then
-         Error := Lisp.Types.Error_Syntax;
-         return;
-      end if;
+         if Next_Pos > Normalized'Last then
+            Tok := (Kind => Lisp.Lexer.Tok_EOF, First => Next_Pos, Last => Next_Pos, Int_Value => 0);
+         else
+            Lisp.Lexer.Next_Token (Normalized, Positive (Next_Pos), Tok, Dummy_Pos);
+         end if;
+         if Tok.Kind /= Lisp.Lexer.Tok_EOF then
+            Error := Lisp.Types.Error_Trailing_Input;
+            return;
+         end if;
 
-      Lisp.Lexer.Next_Token (Normalized, Positive (Next_Pos), Tok, Dummy_Pos);
-      if Tok.Kind /= Lisp.Lexer.Tok_EOF then
-         Error := Lisp.Types.Error_Trailing_Input;
-         return;
-      end if;
+         Lisp.Eval.Eval (RT, Lisp.Env.Global_Frame, Expr, Lisp.Config.Max_Fuel, Result, Error);
+         if Error /= Lisp.Types.Error_None then
+            return;
+         end if;
 
-      Lisp.Eval.Eval (RT, Lisp.Env.Global_Frame, Expr, Lisp.Config.Max_Fuel, Result, Error);
-      if Error /= Lisp.Types.Error_None then
-         return;
-      end if;
-
-      Lisp.Printer.Print (RT, Result, Buffer, Error);
+         Lisp.Printer.Print (RT, Result, Buffer, Error);
+      end;
    end Run;
 end Lisp.Driver;

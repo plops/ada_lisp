@@ -13,7 +13,7 @@ package body Lisp.Runtime with SPARK_Mode is
        and then Name'First = 1
        and then First in Name'Range
        and then Last in First .. Name'Last,
-     Post => (if Lisp.Types."=" (Error, Lisp.Types.Error_None) then Valid (RT));
+     Post => Valid (RT);
 
    procedure Bind_Primitive
      (RT      : in out State;
@@ -22,7 +22,7 @@ package body Lisp.Runtime with SPARK_Mode is
       Error   : out Lisp.Types.Error_Code)
    with
      Pre  => Valid (RT),
-     Post => (if Lisp.Types."=" (Error, Lisp.Types.Error_None) then Valid (RT)) is
+     Post => Valid (RT) is
       Ref : Lisp.Types.Cell_Ref;
    begin
       Lisp.Store.Make_Primitive (RT.Store, Prim, Ref, Error);
@@ -51,7 +51,9 @@ package body Lisp.Runtime with SPARK_Mode is
       Lisp.Store.Initialize (RT.Store);
       Lisp.Env.Initialize (RT.Env);
       RT.Known := (others => 0);
-      pragma Assert (Valid (RT));
+      pragma Assert (Lisp.Symbols.Valid (RT.Symbols));
+      pragma Assert (Lisp.Store.Valid (RT.Store));
+      pragma Assert (Lisp.Env.Valid (RT.Env));
 
       Intern_Known (RT, "quote", 1, 5, Name_Id, Error);
       if Error /= Lisp.Types.Error_None then return; end if;
@@ -125,6 +127,9 @@ package body Lisp.Runtime with SPARK_Mode is
       Bind_Primitive (RT, RT.Known.Le_Id, Lisp.Types.Prim_Le, Error);
       if Error /= Lisp.Types.Error_None then return; end if;
 
+      pragma Assert (Lisp.Symbols.Valid (RT.Symbols));
+      pragma Assert (Lisp.Store.Valid (RT.Store));
+      pragma Assert (Lisp.Env.Valid (RT.Env));
       Error := Lisp.Types.Error_None;
    end Initialize;
 

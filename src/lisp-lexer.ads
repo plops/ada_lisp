@@ -28,5 +28,8 @@ package Lisp.Lexer with SPARK_Mode is
    with
      Pre => Source'First = 1
        and then Pos in Source'Range
-       and then Source'Last < Natural'Last;
+       and then Source'Last < Natural'Last,
+     Post => Next_Pos > 0
+       and then Item.First > 0
+       and then Item.Last in Item.First .. Source'Last + 1;
 end Lisp.Lexer;

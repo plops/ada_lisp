@@ -34,6 +34,7 @@ package Lisp.Env with SPARK_Mode is
       Error     : out Lisp.Types.Error_Code)
    with
      Pre => Valid (Env_State)
+       and then Parent in 1 .. Frame_Count (Env_State)
        and then Names'First = 1
        and then Values'First = 1,
      Post => Valid (Env_State);
@@ -59,20 +60,26 @@ private
      (Env_State : State;
       Frame     : Positive) return Boolean is
      (Env_State.Frames (Frame).Parent /= Lisp.Types.No_Frame
-      and then Env_State.Frames (Frame).Parent < Frame);
+      and then Env_State.Frames (Frame).Parent < Frame)
+   with
+     Pre => Frame in 1 .. Lisp.Config.Max_Frames;
 
    function Binding_Name_Unique
      (Env_State : State;
       Frame     : Positive;
       Index     : Binding_Index) return Boolean is
      (for all J in Index + 1 .. Env_State.Frames (Frame).Count =>
-        Env_State.Frames (Frame).Names (Index) /= Env_State.Frames (Frame).Names (J));
+        Env_State.Frames (Frame).Names (Index) /= Env_State.Frames (Frame).Names (J))
+   with
+     Pre => Frame in 1 .. Lisp.Config.Max_Frames;
 
    function Frame_Names_Unique
      (Env_State : State;
       Frame     : Positive) return Boolean is
      (for all I in 1 .. Env_State.Frames (Frame).Count =>
-        Binding_Name_Unique (Env_State, Frame, I));
+        Binding_Name_Unique (Env_State, Frame, I))
+   with
+     Pre => Frame in 1 .. Lisp.Config.Max_Frames;
 
    function Valid (Env_State : State) return Boolean is
      (Env_State.Next_Free >= 2
