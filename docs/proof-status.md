@@ -28,5 +28,7 @@ Project split:
 
 - `lisp_prove.gpr` is the proof gate for `src/`, `app/`, and `proofs/`
 - `lisp.gpr` remains the build-and-test project and includes `tests/`
-- `scripts/prove.sh` runs the proof gate with `-j0`
+- `scripts/prove.sh` serializes runs with a lock file, defaults to `-j0`, and
+  uses `GNATPROVE_PROVER=cvc5`, `GNATPROVE_STEPS=200`, and
+  `GNATPROVE_TIMEOUT=10` unless overridden in the environment
 - `scripts/test.sh` enforces executable regression coverage for the test programs
