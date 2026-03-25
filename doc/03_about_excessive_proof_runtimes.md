@@ -12,7 +12,7 @@ Change your daily development command to this:
 ```bash
 gnatprove -j0 -P lisp_prove.gpr --mode=prove --level=0 --timeout=1 -u <changed-file>
 ```
-*   `--level=0`: Tells GNATprove to use only the fastest prover (usually CVC5) with very basic settings. It won't try complex, time-consuming heuristic combinations.
+*   `--level=0`: Tells GNATprove to use only the fastest prover (usually CVC5 but note that on this Gentoo we only have the alt-ergo proover) with very basic settings. It won't try complex, time-consuming heuristic combinations.
 *   `--timeout=1`: Gives the prover exactly 1 second per Verification Condition (VC). If it can't prove it in 1 second, it's usually because you are missing a `pragma Loop_Invariant` or a `Post` condition, not because it needs more time.
 *   *Once `level=0` passes, you can bump to `--level=1` or `--steps=1000` to catch the few remaining complex mathematical proofs.*
 
