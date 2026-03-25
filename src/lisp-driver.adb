@@ -12,15 +12,19 @@ package body Lisp.Driver with SPARK_Mode is
    use type Lisp.Types.Error_Code;
    use type Lisp.Lexer.Token_Kind;
 
-   function To_One_Based (Source : String) return String
-   with
-     Pre => Source'Length > 0 is
-      Result : String (1 .. Source'Length) := (others => ' ');
+   function To_One_Based (Source : String) return String is
    begin
-      for I in Source'Range loop
-         Result (I - Source'First + 1) := Source (I);
-      end loop;
-      return Result;
+      if Source'Length = 0 then
+         return "";
+      end if;
+      declare
+         Result : String (1 .. Source'Length) := (others => ' ');
+      begin
+         for I in Source'Range loop
+            Result (I - Source'First + 1) := Source (I);
+         end loop;
+         return Result;
+      end;
    end To_One_Based;
 
    procedure Run

@@ -77,9 +77,22 @@ private
      (Env_State : State;
       Frame     : Positive) return Boolean is
      (for all I in 1 .. Env_State.Frames (Frame).Count =>
-        Binding_Name_Unique (Env_State, Frame, I))
+        (if I < Env_State.Frames (Frame).Count then
+            (for all J in I + 1 .. Env_State.Frames (Frame).Count =>
+               Env_State.Frames (Frame).Names (I) /= Env_State.Frames (Frame).Names (J))
+         else
+            True))
    with
      Pre => Frame in 1 .. Lisp.Config.Max_Frames;
+
+   function Names_Unique (Names : Lisp.Types.Symbol_Id_Array) return Boolean is
+     (for all I in Names'Range =>
+        (if I < Names'Last then
+            (for all J in I + 1 .. Names'Last => Names (I) /= Names (J))
+         else
+            True))
+   with
+     Pre => Names'First = 1;
 
    function Valid (Env_State : State) return Boolean is
      (Env_State.Next_Free >= 2
