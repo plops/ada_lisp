@@ -3,7 +3,7 @@ with Lisp.Runtime;
 with Lisp.Store;
 with Lisp.Types;
 
-procedure Test.Primitives is
+procedure Test.Primitives with SPARK_Mode => Off is
    use type Lisp.Types.Error_Code;
    RT     : Lisp.Runtime.State;
    A      : Lisp.Types.Cell_Ref;

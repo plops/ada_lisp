@@ -2,7 +2,7 @@ with Lisp.Driver;
 with Lisp.Text_Buffers;
 with Lisp.Types;
 
-procedure Test.Eval_Define is
+procedure Test.Eval_Define with SPARK_Mode => Off is
    use type Lisp.Types.Error_Code;
    Buffer : Lisp.Text_Buffers.Buffer;
    Error  : Lisp.Types.Error_Code;

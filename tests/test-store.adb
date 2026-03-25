@@ -2,7 +2,7 @@ with Lisp.Config;
 with Lisp.Store;
 with Lisp.Types;
 
-procedure Test.Store is
+procedure Test.Store with SPARK_Mode => Off is
    use type Lisp.Types.Error_Code;
    use type Lisp.Types.Cell_Kind;
    Arena : Lisp.Store.Arena;

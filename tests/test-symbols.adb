@@ -3,7 +3,7 @@ with Lisp.Symbols;
 with Lisp.Text_Buffers;
 with Lisp.Types;
 
-procedure Test.Symbols is
+procedure Test.Symbols with SPARK_Mode => Off is
    use type Lisp.Types.Error_Code;
    Table  : Lisp.Symbols.Table;
    Id1    : Lisp.Types.Symbol_Id;

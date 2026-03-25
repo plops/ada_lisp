@@ -2,6 +2,8 @@ with Lisp.Config;
 with Lisp.Types;
 
 package Lisp.Store with SPARK_Mode is
+   use type Lisp.Types.Cell_Kind;
+
    type Arena is private;
 
    Nil_Ref  : constant Lisp.Types.Cell_Ref := 1;
@@ -10,16 +12,34 @@ package Lisp.Store with SPARK_Mode is
    procedure Initialize (S : out Arena) with Post => Valid (S);
    function Valid (S : Arena) return Boolean;
    function Is_Valid_Ref (S : Arena; Ref : Lisp.Types.Cell_Ref) return Boolean;
-   function Kind_Of (S : Arena; Ref : Lisp.Types.Cell_Ref) return Lisp.Types.Cell_Kind;
+   function Kind_Of (S : Arena; Ref : Lisp.Types.Cell_Ref) return Lisp.Types.Cell_Kind
+   with
+     Pre => Is_Valid_Ref (S, Ref);
 
-   function Integer_Value (S : Arena; Ref : Lisp.Types.Cell_Ref) return Lisp.Types.Lisp_Int;
-   function Symbol_Value (S : Arena; Ref : Lisp.Types.Cell_Ref) return Lisp.Types.Symbol_Id;
-   function Car (S : Arena; Ref : Lisp.Types.Cell_Ref) return Lisp.Types.Cell_Ref;
-   function Cdr (S : Arena; Ref : Lisp.Types.Cell_Ref) return Lisp.Types.Cell_Ref;
-   function Primitive_Value (S : Arena; Ref : Lisp.Types.Cell_Ref) return Lisp.Types.Primitive_Kind;
-   function Closure_Params (S : Arena; Ref : Lisp.Types.Cell_Ref) return Lisp.Types.Cell_Ref;
-   function Closure_Body (S : Arena; Ref : Lisp.Types.Cell_Ref) return Lisp.Types.Cell_Ref;
-   function Closure_Frame (S : Arena; Ref : Lisp.Types.Cell_Ref) return Lisp.Types.Frame_Id;
+   function Integer_Value (S : Arena; Ref : Lisp.Types.Cell_Ref) return Lisp.Types.Lisp_Int
+   with
+     Pre => Is_Valid_Ref (S, Ref) and then Kind_Of (S, Ref) = Lisp.Types.Integer_Cell;
+   function Symbol_Value (S : Arena; Ref : Lisp.Types.Cell_Ref) return Lisp.Types.Symbol_Id
+   with
+     Pre => Is_Valid_Ref (S, Ref) and then Kind_Of (S, Ref) = Lisp.Types.Symbol_Cell;
+   function Car (S : Arena; Ref : Lisp.Types.Cell_Ref) return Lisp.Types.Cell_Ref
+   with
+     Pre => Is_Valid_Ref (S, Ref) and then Kind_Of (S, Ref) = Lisp.Types.Cons_Cell;
+   function Cdr (S : Arena; Ref : Lisp.Types.Cell_Ref) return Lisp.Types.Cell_Ref
+   with
+     Pre => Is_Valid_Ref (S, Ref) and then Kind_Of (S, Ref) = Lisp.Types.Cons_Cell;
+   function Primitive_Value (S : Arena; Ref : Lisp.Types.Cell_Ref) return Lisp.Types.Primitive_Kind
+   with
+     Pre => Is_Valid_Ref (S, Ref) and then Kind_Of (S, Ref) = Lisp.Types.Primitive_Cell;
+   function Closure_Params (S : Arena; Ref : Lisp.Types.Cell_Ref) return Lisp.Types.Cell_Ref
+   with
+     Pre => Is_Valid_Ref (S, Ref) and then Kind_Of (S, Ref) = Lisp.Types.Closure_Cell;
+   function Closure_Body (S : Arena; Ref : Lisp.Types.Cell_Ref) return Lisp.Types.Cell_Ref
+   with
+     Pre => Is_Valid_Ref (S, Ref) and then Kind_Of (S, Ref) = Lisp.Types.Closure_Cell;
+   function Closure_Frame (S : Arena; Ref : Lisp.Types.Cell_Ref) return Lisp.Types.Frame_Id
+   with
+     Pre => Is_Valid_Ref (S, Ref) and then Kind_Of (S, Ref) = Lisp.Types.Closure_Cell;
 
    procedure Make_Integer
      (S     : in out Arena;
@@ -61,14 +81,17 @@ package Lisp.Store with SPARK_Mode is
 
    function Readable_Value (S : Arena; Ref : Lisp.Types.Cell_Ref) return Boolean
    with
+     Pre => Valid (S) and then (Ref = Lisp.Types.No_Ref or else Is_Valid_Ref (S, Ref)),
      Subprogram_Variant => (Decreases => Ref);
 
    function Proper_List (S : Arena; Ref : Lisp.Types.Cell_Ref) return Boolean
    with
+     Pre => Valid (S) and then (Ref = Lisp.Types.No_Ref or else Is_Valid_Ref (S, Ref)),
      Subprogram_Variant => (Decreases => Ref);
 
    function List_Length (S : Arena; Ref : Lisp.Types.Cell_Ref) return Natural
    with
+     Pre => Valid (S) and then (Ref = Lisp.Types.No_Ref or else Is_Valid_Ref (S, Ref)),
      Subprogram_Variant => (Decreases => Ref);
 
 private

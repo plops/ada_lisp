@@ -26,6 +26,11 @@ is
       Right_RT   : Lisp.Runtime.State;
       Right_Value : Lisp.Types.Cell_Ref) return Boolean
    with
+     Pre =>
+       Lisp.Runtime.Valid (Left_RT)
+       and then Lisp.Runtime.Valid (Right_RT)
+       and then Lisp.Model.Readable_Result (Left_RT, Left_Value)
+       and then Lisp.Model.Readable_Result (Right_RT, Right_Value),
      Subprogram_Variant => (Decreases => Left_Value);
 
    procedure Eval_Pure_Closed

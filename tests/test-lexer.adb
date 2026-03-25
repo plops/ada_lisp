@@ -1,7 +1,7 @@
 with Lisp.Lexer;
 with Lisp.Types;
 
-procedure Test.Lexer is
+procedure Test.Lexer with SPARK_Mode => Off is
    use type Lisp.Lexer.Token_Kind;
    Tok  : Lisp.Lexer.Token;
    Next : Natural;

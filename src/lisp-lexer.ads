@@ -24,5 +24,9 @@ package Lisp.Lexer with SPARK_Mode is
      (Source   : in String;
       Pos      : in Positive;
       Item     : out Token;
-      Next_Pos : out Natural);
+      Next_Pos : out Natural)
+   with
+     Pre => Source'First = 1
+       and then Pos in Source'Range
+       and then Source'Last < Natural'Last;
 end Lisp.Lexer;

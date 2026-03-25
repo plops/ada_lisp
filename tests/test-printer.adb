@@ -4,7 +4,7 @@ with Lisp.Runtime;
 with Lisp.Text_Buffers;
 with Lisp.Types;
 
-procedure Test.Printer is
+procedure Test.Printer with SPARK_Mode => Off is
    use type Lisp.Types.Error_Code;
    RT     : Lisp.Runtime.State;
    Buffer : Lisp.Text_Buffers.Buffer;

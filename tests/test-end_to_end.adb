@@ -2,7 +2,7 @@ with Lisp.Driver;
 with Lisp.Text_Buffers;
 with Lisp.Types;
 
-procedure Test.End_To_End is
+procedure Test.End_To_End with SPARK_Mode => Off is
    use type Lisp.Types.Error_Code;
    Buffer : Lisp.Text_Buffers.Buffer;
    Error  : Lisp.Types.Error_Code;

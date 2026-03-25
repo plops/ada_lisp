@@ -17,8 +17,13 @@ package body Lisp.Lexer with SPARK_Mode is
       I     : Natural := Pos;
       Value : Long_Long_Integer := 0;
       Sign  : Long_Long_Integer := 1;
+      Max_Abs_Int : constant Long_Long_Integer :=
+        (if -Long_Long_Integer (Lisp.Config.Min_Int) > Long_Long_Integer (Lisp.Config.Max_Int)
+         then -Long_Long_Integer (Lisp.Config.Min_Int)
+         else Long_Long_Integer (Lisp.Config.Max_Int));
    begin
       while I <= Source'Last and then Is_Space (Source (I)) loop
+         pragma Loop_Invariant (I in Pos .. Source'Last + 1);
          I := I + 1;
       end loop;
 
@@ -50,6 +55,7 @@ package body Lisp.Lexer with SPARK_Mode is
                   J : Natural := I;
                begin
                   while J <= Source'Last and then not Is_Delimiter (Source (J)) and then Source (J) /= ')' loop
+                     pragma Loop_Invariant (J in I .. Source'Last + 1);
                      J := J + 1;
                   end loop;
                   Item := (Kind => Tok_Symbol, First => I, Last => J - 1, Int_Value => 0);
@@ -73,12 +79,24 @@ package body Lisp.Lexer with SPARK_Mode is
       if Is_Digit (Source (I)) then
          declare
             J : Natural := I;
+            Digit : Long_Long_Integer;
          begin
             while J <= Source'Last and then Is_Digit (Source (J)) loop
-               Value := Value * 10 + Character'Pos (Source (J)) - Character'Pos ('0');
+               pragma Loop_Invariant (J in I .. Source'Last + 1);
+               pragma Loop_Invariant (Value in 0 .. Max_Abs_Int + 1);
+               Digit := Long_Long_Integer (Character'Pos (Source (J)) - Character'Pos ('0'));
+               if Value < Max_Abs_Int / 10
+                 or else
+                  (Value = Max_Abs_Int / 10 and then Digit <= Max_Abs_Int mod 10)
+               then
+                  Value := Value * 10 + Digit;
+               else
+                  Value := Max_Abs_Int + 1;
+               end if;
                J := J + 1;
             end loop;
 
+            pragma Assert (J >= I + 1);
             Value := Value * Sign;
             if Value < Long_Long_Integer (Lisp.Config.Min_Int)
               or else Value > Long_Long_Integer (Lisp.Config.Max_Int)
@@ -99,6 +117,7 @@ package body Lisp.Lexer with SPARK_Mode is
          J : Natural := I;
       begin
          while J <= Source'Last and then not Is_Delimiter (Source (J)) and then Source (J) /= ')' loop
+            pragma Loop_Invariant (J in I .. Source'Last + 1);
             J := J + 1;
          end loop;
 

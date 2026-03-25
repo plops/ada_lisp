@@ -3,7 +3,7 @@ with Lisp.Runtime;
 with Lisp.Store;
 with Lisp.Types;
 
-procedure Test.Parser is
+procedure Test.Parser with SPARK_Mode => Off is
    use type Lisp.Types.Error_Code;
    use type Lisp.Types.Cell_Kind;
    RT       : Lisp.Runtime.State;

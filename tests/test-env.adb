@@ -2,7 +2,7 @@ with Lisp.Config;
 with Lisp.Env;
 with Lisp.Types;
 
-procedure Test.Env is
+procedure Test.Env with SPARK_Mode => Off is
    use type Lisp.Types.Error_Code;
    Env_State : Lisp.Env.State;
    Names     : Lisp.Types.Symbol_Id_Array (1 .. 1) := (1 => 7);
