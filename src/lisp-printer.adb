@@ -26,6 +26,12 @@ package body Lisp.Printer with SPARK_Mode is
             Head_Ref : constant Lisp.Types.Cell_Ref := Lisp.Store.Car (RT.Store, Ref);
             Tail_Ref : constant Lisp.Types.Cell_Ref := Lisp.Store.Cdr (RT.Store, Ref);
          begin
+            if Head_Ref = Lisp.Types.No_Ref
+              or else (Tail_Ref /= Lisp.Store.Nil_Ref and then not Lisp.Store.Is_Valid_Ref (RT.Store, Tail_Ref))
+            then
+               Error := Lisp.Types.Error_Type;
+               return;
+            end if;
             Lisp.Text_Buffers.Append_Char (Buffer, ' ', Error);
             if Error /= Lisp.Types.Error_None then
                return;
@@ -74,6 +80,12 @@ package body Lisp.Printer with SPARK_Mode is
                Head_Ref : constant Lisp.Types.Cell_Ref := Lisp.Store.Car (RT.Store, Ref);
                Tail_Ref : constant Lisp.Types.Cell_Ref := Lisp.Store.Cdr (RT.Store, Ref);
             begin
+               if Head_Ref = Lisp.Types.No_Ref
+                 or else (Tail_Ref /= Lisp.Store.Nil_Ref and then not Lisp.Store.Is_Valid_Ref (RT.Store, Tail_Ref))
+               then
+                  Error := Lisp.Types.Error_Type;
+                  return;
+               end if;
                Lisp.Text_Buffers.Append_Char (Buffer, '(', Error);
                if Error /= Lisp.Types.Error_None then
                   return;

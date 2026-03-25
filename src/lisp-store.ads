@@ -24,11 +24,11 @@ package Lisp.Store with SPARK_Mode is
      Pre => Is_Valid_Ref (S, Ref) and then Kind_Of (S, Ref) = Lisp.Types.Symbol_Cell;
    function Car (S : Arena; Ref : Lisp.Types.Cell_Ref) return Lisp.Types.Cell_Ref
    with
-     Pre  => Valid (S) and then Is_Valid_Ref (S, Ref) and then Kind_Of (S, Ref) = Lisp.Types.Cons_Cell,
+     Pre  => Is_Valid_Ref (S, Ref) and then Kind_Of (S, Ref) = Lisp.Types.Cons_Cell,
      Post => Car'Result = Lisp.Types.No_Ref or else Is_Valid_Ref (S, Car'Result);
    function Cdr (S : Arena; Ref : Lisp.Types.Cell_Ref) return Lisp.Types.Cell_Ref
    with
-     Pre  => Valid (S) and then Is_Valid_Ref (S, Ref) and then Kind_Of (S, Ref) = Lisp.Types.Cons_Cell,
+     Pre  => Is_Valid_Ref (S, Ref) and then Kind_Of (S, Ref) = Lisp.Types.Cons_Cell,
      Post => Cdr'Result = Lisp.Types.No_Ref or else Is_Valid_Ref (S, Cdr'Result);
    function Primitive_Value (S : Arena; Ref : Lisp.Types.Cell_Ref) return Lisp.Types.Primitive_Kind
    with
@@ -48,14 +48,32 @@ package Lisp.Store with SPARK_Mode is
       Value : in Lisp.Types.Lisp_Int;
       Ref   : out Lisp.Types.Cell_Ref;
       Error : out Lisp.Types.Error_Code)
-   with Pre => Valid (S), Post => Valid (S);
+   with
+     Pre  => Valid (S),
+     Post =>
+       Valid (S)
+       and then
+       (if Lisp.Types."=" (Error, Lisp.Types.Error_None) then
+           Is_Valid_Ref (S, Ref)
+           and then Kind_Of (S, Ref) = Lisp.Types.Integer_Cell
+        else
+           Ref = Lisp.Types.No_Ref);
 
    procedure Make_Symbol
      (S     : in out Arena;
       Value : in Lisp.Types.Symbol_Id;
       Ref   : out Lisp.Types.Cell_Ref;
       Error : out Lisp.Types.Error_Code)
-   with Pre => Valid (S), Post => Valid (S);
+   with
+     Pre  => Valid (S),
+     Post =>
+       Valid (S)
+       and then
+       (if Lisp.Types."=" (Error, Lisp.Types.Error_None) then
+           Is_Valid_Ref (S, Ref)
+           and then Kind_Of (S, Ref) = Lisp.Types.Symbol_Cell
+        else
+           Ref = Lisp.Types.No_Ref);
 
    procedure Make_Cons
      (S     : in out Arena;
@@ -63,14 +81,32 @@ package Lisp.Store with SPARK_Mode is
       Right : in Lisp.Types.Cell_Ref;
       Ref   : out Lisp.Types.Cell_Ref;
       Error : out Lisp.Types.Error_Code)
-   with Pre => Valid (S), Post => Valid (S);
+   with
+     Pre  => Valid (S),
+     Post =>
+       Valid (S)
+       and then
+       (if Lisp.Types."=" (Error, Lisp.Types.Error_None) then
+           Is_Valid_Ref (S, Ref)
+           and then Kind_Of (S, Ref) = Lisp.Types.Cons_Cell
+        else
+           Ref = Lisp.Types.No_Ref);
 
    procedure Make_Primitive
      (S     : in out Arena;
       Prim  : in Lisp.Types.Primitive_Kind;
       Ref   : out Lisp.Types.Cell_Ref;
       Error : out Lisp.Types.Error_Code)
-   with Pre => Valid (S), Post => Valid (S);
+   with
+     Pre  => Valid (S),
+     Post =>
+       Valid (S)
+       and then
+       (if Lisp.Types."=" (Error, Lisp.Types.Error_None) then
+           Is_Valid_Ref (S, Ref)
+           and then Kind_Of (S, Ref) = Lisp.Types.Primitive_Cell
+        else
+           Ref = Lisp.Types.No_Ref);
 
    procedure Make_Closure
      (S              : in out Arena;
@@ -79,7 +115,16 @@ package Lisp.Store with SPARK_Mode is
       Captured_Frame : in Lisp.Types.Frame_Id;
       Ref            : out Lisp.Types.Cell_Ref;
       Error          : out Lisp.Types.Error_Code)
-   with Pre => Valid (S), Post => Valid (S);
+   with
+     Pre  => Valid (S),
+     Post =>
+       Valid (S)
+       and then
+       (if Lisp.Types."=" (Error, Lisp.Types.Error_None) then
+           Is_Valid_Ref (S, Ref)
+           and then Kind_Of (S, Ref) = Lisp.Types.Closure_Cell
+        else
+           Ref = Lisp.Types.No_Ref);
 
    function Readable_Value (S : Arena; Ref : Lisp.Types.Cell_Ref) return Boolean
    with
@@ -124,6 +169,12 @@ private
       Next_Free : Natural range 1 .. Lisp.Config.Max_Cells + 1 := 3;
       Cells     : Cell_Array := (others => (Kind => Lisp.Types.Nil_Cell));
    end record;
+
+   function Is_Valid_Ref (S : Arena; Ref : Lisp.Types.Cell_Ref) return Boolean is
+     (Ref /= Lisp.Types.No_Ref and then Ref < S.Next_Free);
+
+   function Kind_Of (S : Arena; Ref : Lisp.Types.Cell_Ref) return Lisp.Types.Cell_Kind is
+     (S.Cells (Positive (Ref)).Kind);
 
    function Cell_Refs_Below
      (S   : Arena;

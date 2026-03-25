@@ -1,6 +1,30 @@
 package body Lisp.Store with SPARK_Mode is
    use type Lisp.Types.Cell_Kind;
 
+   procedure Prove_Append_Preserves_Valid
+     (Old_S   : in Arena;
+      New_S   : in Arena;
+      New_Ref : in Positive)
+   with
+     Ghost,
+     Pre =>
+       Valid (Old_S)
+       and then Old_S.Next_Free = New_Ref
+       and then New_S.Next_Free = New_Ref + 1
+       and then New_S.Cells (1).Kind = Lisp.Types.Nil_Cell
+       and then New_S.Cells (2).Kind = Lisp.Types.True_Cell
+       and then (for all I in 3 .. New_Ref - 1 => Cell_Refs_Below (New_S, I))
+       and then Cell_Refs_Below (New_S, New_Ref),
+     Post => Valid (New_S);
+
+   procedure Prove_Append_Preserves_Valid
+     (Old_S   : in Arena;
+      New_S   : in Arena;
+      New_Ref : in Positive) is
+   begin
+      null;
+   end Prove_Append_Preserves_Valid;
+
    procedure Initialize (S : out Arena) is
    begin
       S.Cells := (others => (Kind => Lisp.Types.Nil_Cell));
@@ -8,14 +32,6 @@ package body Lisp.Store with SPARK_Mode is
       S.Cells (2) := (Kind => Lisp.Types.True_Cell);
       S.Next_Free := 3;
    end Initialize;
-
-   function Is_Valid_Ref (S : Arena; Ref : Lisp.Types.Cell_Ref) return Boolean is
-     (Ref /= Lisp.Types.No_Ref and then Ref < S.Next_Free);
-
-   function Kind_Of (S : Arena; Ref : Lisp.Types.Cell_Ref) return Lisp.Types.Cell_Kind is
-   begin
-      return S.Cells (Positive (Ref)).Kind;
-   end Kind_Of;
 
    function Integer_Value (S : Arena; Ref : Lisp.Types.Cell_Ref) return Lisp.Types.Lisp_Int is
    begin
@@ -149,6 +165,7 @@ package body Lisp.Store with SPARK_Mode is
       Value : in Lisp.Types.Lisp_Int;
       Ref   : out Lisp.Types.Cell_Ref;
       Error : out Lisp.Types.Error_Code) is
+      Old_S : constant Arena := S;
    begin
       if S.Next_Free = Lisp.Config.Max_Cells + 1 then
          Ref := Lisp.Types.No_Ref;
@@ -159,6 +176,8 @@ package body Lisp.Store with SPARK_Mode is
       Ref := S.Next_Free;
       S.Cells (Positive (Ref)) := (Kind => Lisp.Types.Integer_Cell, Int_Value => Value);
       S.Next_Free := Ref + 1;
+      pragma Assert ((for all I in 3 .. Ref - 1 => Cell_Refs_Below (S, I)));
+      Prove_Append_Preserves_Valid (Old_S, S, Positive (Ref));
       Error := Lisp.Types.Error_None;
    end Make_Integer;
 
@@ -167,6 +186,7 @@ package body Lisp.Store with SPARK_Mode is
       Value : in Lisp.Types.Symbol_Id;
       Ref   : out Lisp.Types.Cell_Ref;
       Error : out Lisp.Types.Error_Code) is
+      Old_S : constant Arena := S;
    begin
       if S.Next_Free = Lisp.Config.Max_Cells + 1 then
          Ref := Lisp.Types.No_Ref;
@@ -177,6 +197,8 @@ package body Lisp.Store with SPARK_Mode is
       Ref := S.Next_Free;
       S.Cells (Positive (Ref)) := (Kind => Lisp.Types.Symbol_Cell, Sym_Value => Value);
       S.Next_Free := Ref + 1;
+      pragma Assert ((for all I in 3 .. Ref - 1 => Cell_Refs_Below (S, I)));
+      Prove_Append_Preserves_Valid (Old_S, S, Positive (Ref));
       Error := Lisp.Types.Error_None;
    end Make_Symbol;
 
@@ -186,6 +208,7 @@ package body Lisp.Store with SPARK_Mode is
       Right : in Lisp.Types.Cell_Ref;
       Ref   : out Lisp.Types.Cell_Ref;
       Error : out Lisp.Types.Error_Code) is
+      Old_S : constant Arena := S;
    begin
       if (Left /= Lisp.Types.No_Ref and then Left >= S.Next_Free)
         or else
@@ -208,6 +231,7 @@ package body Lisp.Store with SPARK_Mode is
       S.Next_Free := Ref + 1;
       pragma Assert ((for all I in 3 .. Ref - 1 => Cell_Refs_Below (S, I)));
       pragma Assert (Cell_Refs_Below (S, Positive (Ref)));
+      Prove_Append_Preserves_Valid (Old_S, S, Positive (Ref));
       Error := Lisp.Types.Error_None;
    end Make_Cons;
 
@@ -216,6 +240,7 @@ package body Lisp.Store with SPARK_Mode is
       Prim  : in Lisp.Types.Primitive_Kind;
       Ref   : out Lisp.Types.Cell_Ref;
       Error : out Lisp.Types.Error_Code) is
+      Old_S : constant Arena := S;
    begin
       if S.Next_Free = Lisp.Config.Max_Cells + 1 then
          Ref := Lisp.Types.No_Ref;
@@ -226,6 +251,8 @@ package body Lisp.Store with SPARK_Mode is
       Ref := S.Next_Free;
       S.Cells (Positive (Ref)) := (Kind => Lisp.Types.Primitive_Cell, Prim_Value => Prim);
       S.Next_Free := Ref + 1;
+      pragma Assert ((for all I in 3 .. Ref - 1 => Cell_Refs_Below (S, I)));
+      Prove_Append_Preserves_Valid (Old_S, S, Positive (Ref));
       Error := Lisp.Types.Error_None;
    end Make_Primitive;
 
@@ -236,6 +263,7 @@ package body Lisp.Store with SPARK_Mode is
       Captured_Frame : in Lisp.Types.Frame_Id;
       Ref            : out Lisp.Types.Cell_Ref;
       Error          : out Lisp.Types.Error_Code) is
+      Old_S : constant Arena := S;
    begin
       if (Params /= Lisp.Types.No_Ref and then Params >= S.Next_Free)
         or else
@@ -259,8 +287,11 @@ package body Lisp.Store with SPARK_Mode is
          Body_Expr_Value => Body_Expr,
          Frame_Value     => Captured_Frame);
       S.Next_Free := Ref + 1;
+      pragma Assert (Params = Lisp.Types.No_Ref or else Params < Ref);
+      pragma Assert (Body_Expr = Lisp.Types.No_Ref or else Body_Expr < Ref);
       pragma Assert ((for all I in 3 .. Ref - 1 => Cell_Refs_Below (S, I)));
       pragma Assert (Cell_Refs_Below (S, Positive (Ref)));
+      Prove_Append_Preserves_Valid (Old_S, S, Positive (Ref));
       Error := Lisp.Types.Error_None;
    end Make_Closure;
 
