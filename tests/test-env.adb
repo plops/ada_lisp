@@ -1,3 +1,4 @@
+with Lisp.Config;
 with Lisp.Env;
 with Lisp.Types;
 
@@ -17,4 +18,12 @@ begin
    Lisp.Env.Lookup (Env_State, Frame, 7, Value, Found);
    pragma Assert (Found);
    pragma Assert (Value = 3);
+
+   for I in 1 .. Lisp.Config.Max_Frames - 2 loop
+      Lisp.Env.Push_Frame (Env_State, Frame, Names, Values, Frame, Error);
+      pragma Assert (Error = Lisp.Types.Error_None);
+   end loop;
+
+   Lisp.Env.Push_Frame (Env_State, Frame, Names, Values, Frame, Error);
+   pragma Assert (Error = Lisp.Types.Error_Frame_Full);
 end Test.Env;
