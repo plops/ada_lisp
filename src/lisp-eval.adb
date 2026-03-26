@@ -91,8 +91,8 @@ package body Lisp.Eval with SPARK_Mode is
       Count       : out Natural;
       Error       : out Lisp.Types.Error_Code) is
       Cursor      : Lisp.Types.Cell_Ref := List_Ref;
-      Element_Ref : Lisp.Types.Cell_Ref := Lisp.Types.No_Ref;
-      Next_Ref    : Lisp.Types.Cell_Ref := Lisp.Types.No_Ref;
+      Element_Ref : Lisp.Types.Cell_Ref;
+      Next_Ref    : Lisp.Types.Cell_Ref;
    begin
       Elements := (others => Lisp.Types.No_Ref);
       Count := 0;
@@ -137,7 +137,7 @@ package body Lisp.Eval with SPARK_Mode is
       Names    : out Lisp.Types.Symbol_Id_Array;
       Count    : out Natural;
       Error    : out Lisp.Types.Error_Code) is
-      Values : Lisp.Types.Cell_Ref_Array (Names'Range) := (others => Lisp.Types.No_Ref);
+      Values : Lisp.Types.Cell_Ref_Array (Names'Range);
    begin
       Names := (others => 0);
       Proper_List_To_Array (RT, List_Ref, Values, Count, Error);
@@ -177,7 +177,7 @@ package body Lisp.Eval with SPARK_Mode is
       Error         : out Lisp.Types.Error_Code) is
       Old_Cell_Count : constant Natural := Lisp.Store.Cell_Count (RT.Store);
       Old_Env        : constant Lisp.Env.State := RT.Env;
-      Exprs          : Lisp.Types.Cell_Ref_Array (Values'Range) := (others => Lisp.Types.No_Ref);
+      Exprs          : Lisp.Types.Cell_Ref_Array (Values'Range);
    begin
       Values := (others => Lisp.Types.No_Ref);
       Proper_List_To_Array (RT, List_Ref, Exprs, Count, Error);
@@ -220,8 +220,8 @@ package body Lisp.Eval with SPARK_Mode is
       Old_Cell_Count : constant Natural := Lisp.Store.Cell_Count (RT.Store);
       Old_Env        : constant Lisp.Env.State := RT.Env;
       Cursor         : Lisp.Types.Cell_Ref := Forms;
-      Form_Ref       : Lisp.Types.Cell_Ref := Lisp.Types.No_Ref;
-      Next_Ref       : Lisp.Types.Cell_Ref := Lisp.Types.No_Ref;
+      Form_Ref       : Lisp.Types.Cell_Ref;
+      Next_Ref       : Lisp.Types.Cell_Ref;
    begin
       Result_Ref := Lisp.Types.No_Ref;
       if Cursor = Lisp.Store.Nil_Ref then
@@ -276,22 +276,22 @@ package body Lisp.Eval with SPARK_Mode is
       Fuel          : in Lisp.Types.Fuel_Count;
       Result_Ref    : out Lisp.Types.Cell_Ref;
       Error         : out Lisp.Types.Error_Code) is
-      Head         : Lisp.Types.Cell_Ref := Lisp.Types.No_Ref;
-      Args_List    : Lisp.Types.Cell_Ref := Lisp.Types.No_Ref;
-      Operator     : Lisp.Types.Cell_Ref := Lisp.Types.No_Ref;
-      Arg_Values   : Lisp.Types.Cell_Ref_Array (1 .. Lisp.Config.Max_List_Elements) := (others => Lisp.Types.No_Ref);
-      Name_Array   : Lisp.Types.Symbol_Id_Array (1 .. Lisp.Config.Max_Frame_Bindings) := (others => 0);
-      Arg_Count    : Natural := 0;
-      Found        : Boolean := False;
-      New_Frame    : Lisp.Types.Frame_Id := Lisp.Types.No_Frame;
-      Closure_Frame_Id : Lisp.Types.Frame_Id := Lisp.Types.No_Frame;
-      Params       : Lisp.Types.Cell_Ref := Lisp.Types.No_Ref;
-      Body_Expr    : Lisp.Types.Cell_Ref := Lisp.Types.No_Ref;
-      Name_Id      : Lisp.Types.Symbol_Id := 0;
-      Form1        : Lisp.Types.Cell_Ref := Lisp.Types.No_Ref;
-      Form2        : Lisp.Types.Cell_Ref := Lisp.Types.No_Ref;
-      Form3        : Lisp.Types.Cell_Ref := Lisp.Types.No_Ref;
-      Tail         : Lisp.Types.Cell_Ref := Lisp.Types.No_Ref;
+      Head         : Lisp.Types.Cell_Ref;
+      Args_List    : Lisp.Types.Cell_Ref;
+      Operator     : Lisp.Types.Cell_Ref;
+      Arg_Values   : Lisp.Types.Cell_Ref_Array (1 .. Lisp.Config.Max_List_Elements);
+      Name_Array   : Lisp.Types.Symbol_Id_Array (1 .. Lisp.Config.Max_Frame_Bindings);
+      Arg_Count    : Natural;
+      Found        : Boolean;
+      New_Frame    : Lisp.Types.Frame_Id;
+      Closure_Frame_Id : Lisp.Types.Frame_Id;
+      Params       : Lisp.Types.Cell_Ref;
+      Body_Expr    : Lisp.Types.Cell_Ref;
+      Name_Id      : Lisp.Types.Symbol_Id;
+      Form1        : Lisp.Types.Cell_Ref;
+      Form2        : Lisp.Types.Cell_Ref;
+      Form3        : Lisp.Types.Cell_Ref;
+      Tail         : Lisp.Types.Cell_Ref;
       Old_Env      : constant Lisp.Env.State := RT.Env;
 
       procedure Assert_Frames_Preserved with Ghost is
@@ -441,7 +441,6 @@ package body Lisp.Eval with SPARK_Mode is
                elsif Name_Id = RT.Known.Begin_Id then
                   Eval_Begin (RT, Current_Frame, Args_List, Fuel - 1, Result_Ref, Error);
                   Assert_Frames_Preserved;
-                  Assert_Frames_Preserved;
                   return;
                elsif Name_Id = RT.Known.Lambda_Id then
                   if Lisp.Store.Kind_Of (RT.Store, Args_List) /= Lisp.Types.Cons_Cell then
@@ -496,6 +495,9 @@ package body Lisp.Eval with SPARK_Mode is
                      Assert_Frames_Preserved;
                      return;
                   end if;
+                  pragma Assert (Arg_Count <= Name_Array'Length);
+                  pragma Assert
+                    (Name_Array (Name_Array'First) = Name_Array (Name_Array'First));
                   Lisp.Store.Make_Closure (RT.Store, Params, Body_Expr, Current_Frame, Result_Ref, Error);
                   Assert_Frames_Preserved;
                   return;
@@ -622,7 +624,7 @@ package body Lisp.Eval with SPARK_Mode is
                      return;
                   end if;
                   declare
-                     Param_Count : Natural := 0;
+                     Param_Count : Natural;
                   begin
                      Params_To_Array (RT, Params, Name_Array, Param_Count, Error);
                      if Error /= Lisp.Types.Error_None then
