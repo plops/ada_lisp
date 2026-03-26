@@ -69,6 +69,8 @@ package body Lisp.Parser with SPARK_Mode is
        and then Source'First = 1
        and then Source'Last < Natural'Last
        and then Tok.First > 0
+       and then (if Tok.Kind /= Lisp.Lexer.Tok_EOF then Tok.First in Source'Range)
+       and then (if Tok.Kind /= Lisp.Lexer.Tok_EOF then Tok.Last in Tok.First .. Source'Last)
        and then Cursor in Tok.First .. Source'Last + 1,
      Post => Cursor in Tok.First .. Source'Last + 1
        and then Lisp.Symbols.Valid (RT.Symbols)
@@ -108,9 +110,13 @@ package body Lisp.Parser with SPARK_Mode is
            (if Index > 0 then Suffix_Valid (RT, Elements, Positive (Index), Elem_Count));
          pragma Loop_Invariant (Valid_Result (RT, Result));
          declare
-            Current : constant Positive := Positive (Index);
+            Current    : constant Positive := Positive (Index);
+            New_Result : Lisp.Types.Cell_Ref;
          begin
-            Lisp.Store.Make_Cons (RT.Store, Elements (Current), Result, Result, Error);
+            Lisp.Store.Make_Cons (RT.Store, Elements (Current), Result, New_Result, Error);
+            if Error = Lisp.Types.Error_None then
+               Result := New_Result;
+            end if;
          end;
          if Error /= Lisp.Types.Error_None then
             Ref := Lisp.Types.No_Ref;
@@ -135,9 +141,16 @@ package body Lisp.Parser with SPARK_Mode is
      Post => Next_Pos in Pos .. Source'Last + 1
        and then Item.First > 0
        and then Item.Last in Item.First .. Source'Last + 1
-       and then (if Item.Kind /= Lisp.Lexer.Tok_EOF then Item.First in Source'Range) is
+       and then
+       (if Item.Kind /= Lisp.Lexer.Tok_EOF then
+           Item.First in Pos .. Source'Last
+           and then Item.Last in Item.First .. Source'Last) is
    begin
       Lisp.Lexer.Next_Token (Source, Pos, Item, Next_Pos);
+      pragma Assert
+        (if Item.Kind /= Lisp.Lexer.Tok_EOF then
+            Item.First in Pos .. Source'Last
+            and then Item.Last in Item.First .. Source'Last);
    end Scan_Token;
 
    procedure Parse_Atom
@@ -222,9 +235,11 @@ package body Lisp.Parser with SPARK_Mode is
          return;
       end if;
 
+      pragma Assert (Lisp.Store.Is_Valid_Ref (RT.Store, Elem_Ref));
       pragma Assert (Count < List_Element_Count'Last);
       Count := Count + 1;
       Elements (Count) := Elem_Ref;
+      pragma Assert (Element_Prefix_Valid (RT, Elements, Count));
    end Parse_List_Element;
 
    procedure Parse_Dotted_Tail
@@ -372,6 +387,7 @@ package body Lisp.Parser with SPARK_Mode is
             return;
          end if;
          Scan_Token (Source, Cursor, Tok, Cursor);
+         pragma Assert (Cursor in Tok.First .. Source'Last + 1);
          case Tok.Kind is
             when Lisp.Lexer.Tok_RParen =>
                Make_List (RT, Elements, Count, Lisp.Store.Nil_Ref, Ref, Error);
@@ -379,6 +395,12 @@ package body Lisp.Parser with SPARK_Mode is
                return;
             when Lisp.Lexer.Tok_Dot =>
                if Count = 0 then
+                  Ref := Lisp.Types.No_Ref;
+                  Next_Pos := Cursor;
+                  Error := Lisp.Types.Error_Syntax;
+                  return;
+               end if;
+               if Cursor > Source'Last then
                   Ref := Lisp.Types.No_Ref;
                   Next_Pos := Cursor;
                   Error := Lisp.Types.Error_Syntax;
@@ -454,8 +476,8 @@ package body Lisp.Parser with SPARK_Mode is
       Tok       : Lisp.Lexer.Token;
       Cursor    : Positive := Pos;
    begin
-      pragma Assert (Lisp.Env.Valid (RT.Env));
       Scan_Token (Source, Pos, Tok, Cursor);
+      pragma Assert (Cursor in Tok.First .. Source'Last + 1);
       Parse_Token_Expr (Source, Tok, Cursor, RT, Ref, Error);
       Next_Pos := Cursor;
    end Parse_Expr;
@@ -469,9 +491,7 @@ package body Lisp.Parser with SPARK_Mode is
       Error    : out Lisp.Types.Error_Code) is
       Cursor : Positive;
    begin
-      pragma Assert (Lisp.Env.Valid (RT.Env));
       Parse_Expr (Source, Pos, RT, Ref, Cursor, Error);
-      pragma Assert (Lisp.Env.Valid (RT.Env));
       Next_Pos := Natural (Cursor);
    end Parse_One;
 end Lisp.Parser;

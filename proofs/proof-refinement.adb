@@ -3,6 +3,7 @@ with Lisp.Eval;
 with Lisp.Model;
 with Lisp.Parser;
 with Lisp.Runtime;
+with Lisp.Store;
 with Lisp.Types;
 
 procedure Proof.Refinement with SPARK_Mode is
@@ -15,7 +16,8 @@ procedure Proof.Refinement with SPARK_Mode is
    is
       Model_RT     : Lisp.Runtime.State;
       Exec_RT      : Lisp.Runtime.State;
-      Expr         : Lisp.Types.Cell_Ref;
+      Model_Expr   : Lisp.Types.Cell_Ref;
+      Exec_Expr    : Lisp.Types.Cell_Ref;
       Next_Pos     : Natural;
       Model_Result : Lisp.Types.Cell_Ref;
       Exec_Result  : Lisp.Types.Cell_Ref;
@@ -37,8 +39,8 @@ procedure Proof.Refinement with SPARK_Mode is
          return;
       end if;
 
-      Lisp.Parser.Parse_One (Source, 1, Model_RT, Expr, Next_Pos, Model_Error);
-      Lisp.Parser.Parse_One (Source, 1, Exec_RT, Expr, Next_Pos, Exec_Error);
+      Lisp.Parser.Parse_One (Source, 1, Model_RT, Model_Expr, Next_Pos, Model_Error);
+      Lisp.Parser.Parse_One (Source, 1, Exec_RT, Exec_Expr, Next_Pos, Exec_Error);
       if Model_Error /= Lisp.Types.Error_None
         or else Exec_Error /= Lisp.Types.Error_None
       then
@@ -47,22 +49,22 @@ procedure Proof.Refinement with SPARK_Mode is
 
       if not Lisp.Runtime.Valid (Model_RT)
         or else not Lisp.Runtime.Valid (Exec_RT)
-        or else not Lisp.Model.Pure_Subset_Expr (Model_RT, Expr)
+        or else not Lisp.Model.Pure_Subset_Expr (Model_RT, Model_Expr)
       then
          return;
       end if;
 
       Lisp.Model.Eval_Pure_Closed
-        (Model_RT, Lisp.Env.Global_Frame, Expr, 64, Model_Result, Model_Error);
+        (Model_RT, Lisp.Env.Global_Frame, Model_Expr, 64, Model_Result, Model_Error);
       Lisp.Eval.Eval
-        (Exec_RT, Lisp.Env.Global_Frame, Expr, 64, Exec_Result, Exec_Error);
+        (Exec_RT, Lisp.Env.Global_Frame, Exec_Expr, 64, Exec_Result, Exec_Error);
 
       if Model_Error = Exec_Error
         and then Exec_Error = Lisp.Types.Error_None
         and then Lisp.Runtime.Valid (Model_RT)
         and then Lisp.Runtime.Valid (Exec_RT)
-        and then Lisp.Model.Readable_Result (Model_RT, Model_Result)
-        and then Lisp.Model.Readable_Result (Exec_RT, Exec_Result)
+        and then Lisp.Store.Readable_Value (Model_RT.Store, Model_Result)
+        and then Lisp.Store.Readable_Value (Exec_RT.Store, Exec_Result)
       then
          declare
             Same : constant Boolean :=

@@ -93,7 +93,11 @@ package body Lisp.Primitives with SPARK_Mode is
                Error := Lisp.Types.Error_Type;
             else
                Result_Ref := Lisp.Store.Car (RT.Store, Arg1);
-               Error := Lisp.Types.Error_None;
+               if Result_Ref = Lisp.Types.No_Ref then
+                  Error := Lisp.Types.Error_Type;
+               else
+                  Error := Lisp.Types.Error_None;
+               end if;
             end if;
          when Lisp.Types.Prim_Cdr =>
             Expect_Arity (1, Arg_Count, Result_Ref, Error);
@@ -109,7 +113,11 @@ package body Lisp.Primitives with SPARK_Mode is
                Error := Lisp.Types.Error_Type;
             else
                Result_Ref := Lisp.Store.Cdr (RT.Store, Arg1);
-               Error := Lisp.Types.Error_None;
+               if Result_Ref = Lisp.Types.No_Ref then
+                  Error := Lisp.Types.Error_Type;
+               else
+                  Error := Lisp.Types.Error_None;
+               end if;
             end if;
          when Lisp.Types.Prim_Null =>
             Expect_Arity (1, Arg_Count, Result_Ref, Error);

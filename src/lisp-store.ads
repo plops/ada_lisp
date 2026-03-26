@@ -25,10 +25,22 @@ package Lisp.Store with SPARK_Mode is
      Pre => Is_Valid_Ref (S, Ref) and then Kind_Of (S, Ref) = Lisp.Types.Symbol_Cell;
    function Car (S : Arena; Ref : Lisp.Types.Cell_Ref) return Lisp.Types.Cell_Ref
    with
-     Pre => Is_Valid_Ref (S, Ref) and then Kind_Of (S, Ref) = Lisp.Types.Cons_Cell;
+     Pre => Valid (S)
+       and then Is_Valid_Ref (S, Ref)
+       and then Kind_Of (S, Ref) = Lisp.Types.Cons_Cell,
+     Post =>
+       Car'Result < Ref
+       and then
+       (Car'Result = Lisp.Types.No_Ref or else Is_Valid_Ref (S, Car'Result));
    function Cdr (S : Arena; Ref : Lisp.Types.Cell_Ref) return Lisp.Types.Cell_Ref
    with
-     Pre => Is_Valid_Ref (S, Ref) and then Kind_Of (S, Ref) = Lisp.Types.Cons_Cell;
+     Pre => Valid (S)
+       and then Is_Valid_Ref (S, Ref)
+       and then Kind_Of (S, Ref) = Lisp.Types.Cons_Cell,
+     Post =>
+       Cdr'Result < Ref
+       and then
+       (Cdr'Result = Lisp.Types.No_Ref or else Is_Valid_Ref (S, Cdr'Result));
    function Primitive_Value (S : Arena; Ref : Lisp.Types.Cell_Ref) return Lisp.Types.Primitive_Kind
    with
      Pre => Is_Valid_Ref (S, Ref) and then Kind_Of (S, Ref) = Lisp.Types.Primitive_Cell;
@@ -133,6 +145,19 @@ package Lisp.Store with SPARK_Mode is
    function Readable_Value (S : Arena; Ref : Lisp.Types.Cell_Ref) return Boolean
    with
      Pre => Valid (S) and then (Ref = Lisp.Types.No_Ref or else Is_Valid_Ref (S, Ref)),
+     Post =>
+       (if Readable_Value'Result then
+           Is_Valid_Ref (S, Ref)
+           and then Kind_Of (S, Ref) /= Lisp.Types.Primitive_Cell
+           and then Kind_Of (S, Ref) /= Lisp.Types.Closure_Cell
+           and then
+           (if Kind_Of (S, Ref) = Lisp.Types.Cons_Cell then
+               Readable_Value (S, Car (S, Ref))
+               and then Readable_Value (S, Cdr (S, Ref))
+             else
+                True)
+        else
+           True),
      Subprogram_Variant => (Decreases => Ref);
 
    function Proper_List (S : Arena; Ref : Lisp.Types.Cell_Ref) return Boolean
