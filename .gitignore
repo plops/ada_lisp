@@ -1,3 +1,5 @@
 bin/
 obj/
 obj_prove/
+.alire-settings/
+.toolchains/

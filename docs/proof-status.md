@@ -31,4 +31,8 @@ Project split:
   passes through GNATprove selectors, uses `GNATPROVE_LEVEL=0` and
   `GNATPROVE_TIMEOUT=1` by default for fail-fast proof iteration, and accepts an optional
   `GNATPROVE_PROVER` override
+- `scripts/install-adacore-community.sh` installs a repo-local Alire/AdaCore
+  community toolchain under `.toolchains/adacore-community`
+- `scripts/prove-adacore.sh` runs the same proof gate with that repo-local
+  toolchain on `PATH`
 - `scripts/test.sh` enforces executable regression coverage for the test programs
