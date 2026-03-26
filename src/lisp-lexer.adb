@@ -30,29 +30,48 @@ package body Lisp.Lexer with SPARK_Mode is
 
       if I > Source'Last then
          Item := (Kind => Tok_EOF, First => I, Last => I, Int_Value => 0);
+         pragma Assert (Item.First > 0);
+         pragma Assert (Item.Last in Item.First .. Source'Last + 1);
          Next_Pos := I;
+         pragma Assert (Next_Pos in Pos .. Source'Last + 1);
          return;
       end if;
 
-      pragma Assert (I in Source'Range);
+      pragma Assert (I in Pos .. Source'Last);
 
       case Source (I) is
          when '(' =>
             Item := (Kind => Tok_LParen, First => I, Last => I, Int_Value => 0);
+            pragma Assert (Item.First > 0);
+            pragma Assert (Item.First in Source'Range);
+            pragma Assert (Item.Last in Item.First .. Source'Last + 1);
             Next_Pos := I + 1;
+            pragma Assert (Next_Pos in Pos .. Source'Last + 1);
             return;
          when ')' =>
             Item := (Kind => Tok_RParen, First => I, Last => I, Int_Value => 0);
+            pragma Assert (Item.First > 0);
+            pragma Assert (Item.First in Source'Range);
+            pragma Assert (Item.Last in Item.First .. Source'Last + 1);
             Next_Pos := I + 1;
+            pragma Assert (Next_Pos in Pos .. Source'Last + 1);
             return;
          when Character'Val (39) =>
             Item := (Kind => Tok_Quote, First => I, Last => I, Int_Value => 0);
+            pragma Assert (Item.First > 0);
+            pragma Assert (Item.First in Source'Range);
+            pragma Assert (Item.Last in Item.First .. Source'Last + 1);
             Next_Pos := I + 1;
+            pragma Assert (Next_Pos in Pos .. Source'Last + 1);
             return;
          when '.' =>
             if I = Source'Last or else Is_Delimiter (Source (I + 1)) or else Source (I + 1) = '.' then
                Item := (Kind => Tok_Dot, First => I, Last => I, Int_Value => 0);
+               pragma Assert (Item.First > 0);
+               pragma Assert (Item.First in Source'Range);
+               pragma Assert (Item.Last in Item.First .. Source'Last + 1);
                Next_Pos := I + 1;
+               pragma Assert (Next_Pos in Pos .. Source'Last + 1);
             else
                declare
                   J : Positive := I;
@@ -63,7 +82,11 @@ package body Lisp.Lexer with SPARK_Mode is
                   end loop;
                   pragma Assert (J in I .. Source'Last + 1);
                   Item := (Kind => Tok_Symbol, First => I, Last => J - 1, Int_Value => 0);
+                  pragma Assert (Item.First > 0);
+                  pragma Assert (Item.First in Source'Range);
+                  pragma Assert (Item.Last in Item.First .. Source'Last + 1);
                   Next_Pos := J;
+                  pragma Assert (Next_Pos in Pos .. Source'Last + 1);
                end;
             end if;
             return;
@@ -73,12 +96,18 @@ package body Lisp.Lexer with SPARK_Mode is
                I := I + 1;
             else
                Item := (Kind => Tok_Symbol, First => I, Last => I, Int_Value => 0);
+               pragma Assert (Item.First > 0);
+               pragma Assert (Item.First in Source'Range);
+               pragma Assert (Item.Last in Item.First .. Source'Last + 1);
                Next_Pos := I + 1;
+               pragma Assert (Next_Pos in Pos .. Source'Last + 1);
                return;
             end if;
          when others =>
             null;
       end case;
+
+      pragma Assert (I in Pos .. Source'Last);
 
       if Is_Digit (Source (I)) then
          declare
@@ -102,6 +131,7 @@ package body Lisp.Lexer with SPARK_Mode is
 
             pragma Assert (J >= I + 1);
             pragma Assert (J in I + 1 .. Source'Last + 1);
+            pragma Assert (J - 1 in Pos .. Source'Last);
             Value := Value * Sign;
             if Value < Long_Long_Integer (Lisp.Config.Min_Int)
               or else Value > Long_Long_Integer (Lisp.Config.Max_Int)
@@ -113,7 +143,11 @@ package body Lisp.Lexer with SPARK_Mode is
                         Last      => J - 1,
                         Int_Value => Lisp.Types.Lisp_Int (Value));
             end if;
+            pragma Assert (Item.First > 0);
+            pragma Assert (Item.First in Source'Range);
+            pragma Assert (Item.Last in Item.First .. Source'Last + 1);
             Next_Pos := J;
+            pragma Assert (Next_Pos in Pos .. Source'Last + 1);
             return;
          end;
       end if;
@@ -129,17 +163,37 @@ package body Lisp.Lexer with SPARK_Mode is
 
          if J = I then
             Item := (Kind => Tok_Bad, First => I, Last => I, Int_Value => 0);
+            pragma Assert (Item.First > 0);
+            pragma Assert (Item.First in Source'Range);
+            pragma Assert (Item.Last in Item.First .. Source'Last + 1);
             Next_Pos := I + 1;
+            pragma Assert (Next_Pos in Pos .. Source'Last + 1);
          elsif J - I = 3 and then Source (I .. J - 1) = "nil" then
             Item := (Kind => Tok_Nil, First => I, Last => J - 1, Int_Value => 0);
+            pragma Assert (Item.First > 0);
+            pragma Assert (Item.First in Source'Range);
+            pragma Assert (Item.Last in Item.First .. Source'Last + 1);
             Next_Pos := J;
+            pragma Assert (Next_Pos in Pos .. Source'Last + 1);
          elsif J - I = 1 and then Source (I .. J - 1) = "t" then
             Item := (Kind => Tok_True, First => I, Last => J - 1, Int_Value => 0);
+            pragma Assert (Item.First > 0);
+            pragma Assert (Item.First in Source'Range);
+            pragma Assert (Item.Last in Item.First .. Source'Last + 1);
             Next_Pos := J;
+            pragma Assert (Next_Pos in Pos .. Source'Last + 1);
          else
             Item := (Kind => Tok_Symbol, First => I, Last => J - 1, Int_Value => 0);
+            pragma Assert (Item.First > 0);
+            pragma Assert (Item.First in Source'Range);
+            pragma Assert (Item.Last in Item.First .. Source'Last + 1);
             Next_Pos := J;
+            pragma Assert (Next_Pos in Pos .. Source'Last + 1);
          end if;
       end;
+      pragma Assert (Next_Pos in Pos .. Source'Last + 1);
+      pragma Assert (Item.First > 0);
+      pragma Assert (Item.Last in Item.First .. Source'Last + 1);
+      pragma Assert (if Item.Kind /= Tok_EOF then Item.First in Source'Range);
    end Next_Token;
 end Lisp.Lexer;
