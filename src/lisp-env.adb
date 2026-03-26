@@ -94,18 +94,6 @@ package body Lisp.Env with SPARK_Mode is
        and then New_State.Frames (Frame).Names (New_State.Frames (Frame).Count) = Name,
      Post => Frame_Names_Unique (New_State, Frame);
 
-   procedure Prove_Frame_Binding_Unique
-     (Env_State : in State;
-      Frame     : in Positive;
-      Index     : in Positive)
-   with
-     Ghost,
-     Pre =>
-       Frame in 1 .. Env_State.Next_Free - 1
-       and then Index <= Env_State.Frames (Frame).Count
-       and then Frame_Names_Unique (Env_State, Frame),
-     Post => Binding_Name_Unique (Env_State, Frame, Index);
-
    function Old_Frames_Preserved
      (Old_State : State;
       New_State : State;
@@ -156,16 +144,34 @@ package body Lisp.Env with SPARK_Mode is
        and then (for all I in Names'Range => Env_State.Frames (Frame).Names (I) = Names (I)),
      Post => Frame_Names_Unique (Env_State, Frame);
 
-   procedure Prove_Names_Binding_Unique
+   procedure Prove_Frame_Pair_Distinct
+     (Env_State : in State;
+      Frame     : in Positive;
+      Left      : in Positive;
+      Right     : in Positive)
+   with
+     Ghost,
+     Pre =>
+       Frame in 1 .. Lisp.Config.Max_Frames
+       and then Frame_Names_Unique (Env_State, Frame)
+       and then Left in 1 .. Env_State.Frames (Frame).Count
+       and then Right in 1 .. Env_State.Frames (Frame).Count
+       and then Left < Right,
+     Post => Env_State.Frames (Frame).Names (Left) /= Env_State.Frames (Frame).Names (Right);
+
+   procedure Prove_Names_Pair_Distinct
      (Names : in Lisp.Types.Symbol_Id_Array;
-      Index : in Positive)
+      Left  : in Positive;
+      Right : in Positive)
    with
      Ghost,
      Pre =>
        Names'First = 1
-       and then Index in Names'Range
-       and then Names_Unique (Names),
-     Post => Names_Binding_Unique (Names, Index);
+       and then Names_Unique (Names)
+       and then Left in Names'Range
+       and then Right in Names'Range
+       and then Left < Right,
+     Post => Names (Left) /= Names (Right);
 
    procedure Initialize (Env_State : in out State) is
    begin
@@ -202,13 +208,12 @@ package body Lisp.Env with SPARK_Mode is
          pragma Loop_Invariant (I in 1 .. New_State.Frames (Frame).Count + 1);
          pragma Loop_Invariant
            ((for all K in 1 .. I - 1 => Binding_Name_Unique (New_State, Frame, K)));
-         Prove_Frame_Binding_Unique (Old_State, Frame, I);
          for J in I + 1 .. New_State.Frames (Frame).Count loop
             pragma Loop_Invariant (J in I + 1 .. New_State.Frames (Frame).Count + 1);
             pragma Loop_Invariant
               ((for all K in I + 1 .. J - 1 =>
                   New_State.Frames (Frame).Names (I) /= New_State.Frames (Frame).Names (K)));
-            pragma Assert (Old_State.Frames (Frame).Names (I) /= Old_State.Frames (Frame).Names (J));
+            Prove_Frame_Pair_Distinct (Old_State, Frame, I, J);
             pragma Assert (New_State.Frames (Frame).Names (I) = Old_State.Frames (Frame).Names (I));
             pragma Assert (New_State.Frames (Frame).Names (J) = Old_State.Frames (Frame).Names (J));
          end loop;
@@ -229,9 +234,6 @@ package body Lisp.Env with SPARK_Mode is
          pragma Loop_Invariant (I in 1 .. New_State.Frames (Frame).Count + 1);
          pragma Loop_Invariant
            ((for all K in 1 .. I - 1 => Binding_Name_Unique (New_State, Frame, K)));
-         if I < New_State.Frames (Frame).Count then
-            Prove_Frame_Binding_Unique (Old_State, Frame, I);
-         end if;
          for J in I + 1 .. New_State.Frames (Frame).Count loop
             pragma Loop_Invariant (J in I + 1 .. New_State.Frames (Frame).Count + 1);
             pragma Loop_Invariant
@@ -243,7 +245,7 @@ package body Lisp.Env with SPARK_Mode is
                pragma Assert (Old_State.Frames (Frame).Names (I) /= Name);
                pragma Assert (New_State.Frames (Frame).Names (I) = Old_State.Frames (Frame).Names (I));
             else
-               pragma Assert (Old_State.Frames (Frame).Names (I) /= Old_State.Frames (Frame).Names (J));
+               Prove_Frame_Pair_Distinct (Old_State, Frame, I, J);
                pragma Assert (New_State.Frames (Frame).Names (I) = Old_State.Frames (Frame).Names (I));
                pragma Assert (New_State.Frames (Frame).Names (J) = Old_State.Frames (Frame).Names (J));
             end if;
@@ -266,14 +268,12 @@ package body Lisp.Env with SPARK_Mode is
          pragma Loop_Invariant (I in 1 .. Env_State.Frames (Frame).Count + 1);
          pragma Loop_Invariant
            ((for all K in 1 .. I - 1 => Binding_Name_Unique (Env_State, Frame, K)));
-         pragma Loop_Invariant (Names_Unique (Names));
-         Prove_Names_Binding_Unique (Names, I);
          for J in I + 1 .. Env_State.Frames (Frame).Count loop
             pragma Loop_Invariant (J in I + 1 .. Env_State.Frames (Frame).Count + 1);
             pragma Loop_Invariant
               ((for all K in I + 1 .. J - 1 =>
                   Env_State.Frames (Frame).Names (I) /= Env_State.Frames (Frame).Names (K)));
-            pragma Assert (Names (I) /= Names (J));
+            Prove_Names_Pair_Distinct (Names, I, J);
             pragma Assert (Env_State.Frames (Frame).Names (I) = Names (I));
             pragma Assert (Env_State.Frames (Frame).Names (J) = Names (J));
          end loop;
@@ -284,32 +284,24 @@ package body Lisp.Env with SPARK_Mode is
             Binding_Name_Unique (Env_State, Frame, K)));
    end Prove_Frame_Unique_From_Names;
 
-   procedure Prove_Frame_Binding_Unique
+   procedure Prove_Frame_Pair_Distinct
      (Env_State : in State;
       Frame     : in Positive;
-      Index     : in Positive) is
+      Left      : in Positive;
+      Right     : in Positive) is
    begin
-      for K in 1 .. Env_State.Frames (Frame).Count loop
-         pragma Loop_Invariant (K in 1 .. Env_State.Frames (Frame).Count + 1);
-         if K = Index then
-            pragma Assert (Binding_Name_Unique (Env_State, Frame, K));
-         end if;
-      end loop;
-      pragma Assert (Binding_Name_Unique (Env_State, Frame, Index));
-   end Prove_Frame_Binding_Unique;
+      pragma Assert (Binding_Name_Unique (Env_State, Frame, Left));
+      pragma Assert (Env_State.Frames (Frame).Names (Left) /= Env_State.Frames (Frame).Names (Right));
+   end Prove_Frame_Pair_Distinct;
 
-   procedure Prove_Names_Binding_Unique
+   procedure Prove_Names_Pair_Distinct
      (Names : in Lisp.Types.Symbol_Id_Array;
-      Index : in Positive) is
+      Left  : in Positive;
+      Right : in Positive) is
    begin
-      for K in Names'Range loop
-         pragma Loop_Invariant (K in Names'Range);
-         if K = Index then
-            pragma Assert (Names_Binding_Unique (Names, K));
-         end if;
-      end loop;
-      pragma Assert (Names_Binding_Unique (Names, Index));
-   end Prove_Names_Binding_Unique;
+      pragma Assert (Names_Binding_Unique (Names, Left));
+      pragma Assert (Names (Left) /= Names (Right));
+   end Prove_Names_Pair_Distinct;
 
    procedure Prove_Define_Global_Preserves_Valid
      (Old_State : in State;
@@ -474,6 +466,7 @@ package body Lisp.Env with SPARK_Mode is
          Error := Lisp.Types.Error_Invalid_Parameter_List;
          return;
       end if;
+      pragma Assert (Names_Unique (Names));
 
       if Env_State.Next_Free = Lisp.Config.Max_Frames + 1 then
          Frame := Lisp.Types.No_Frame;

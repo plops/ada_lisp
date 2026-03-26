@@ -82,7 +82,12 @@ private
 
    function Frame_Names_Unique
      (Frame_State : Frame_Record) return Boolean is
-     (for all I in 1 .. Frame_State.Count => Binding_Name_Unique (Frame_State, I));
+     (for all I in 1 .. Frame_State.Count =>
+        (if I < Frame_State.Count then
+            (for all J in I + 1 .. Frame_State.Count =>
+               Frame_State.Names (I) /= Frame_State.Names (J))
+         else
+            True));
 
    function Binding_Name_Unique
      (Env_State : State;
@@ -108,7 +113,11 @@ private
          True);
 
    function Names_Unique (Names : Lisp.Types.Symbol_Id_Array) return Boolean is
-     (for all I in Names'Range => Names_Binding_Unique (Names, I));
+     (for all I in Names'Range =>
+        (if I < Names'Last then
+            (for all J in I + 1 .. Names'Last => Names (I) /= Names (J))
+         else
+            True));
 
    function Valid (Env_State : State) return Boolean is
      (Env_State.Next_Free >= 2
