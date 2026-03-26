@@ -11,6 +11,7 @@ package Lisp.Store with SPARK_Mode is
 
    procedure Initialize (S : out Arena) with Post => Valid (S);
    function Valid (S : Arena) return Boolean;
+   function Cell_Count (S : Arena) return Natural;
    function Is_Valid_Ref (S : Arena; Ref : Lisp.Types.Cell_Ref) return Boolean;
    function Kind_Of (S : Arena; Ref : Lisp.Types.Cell_Ref) return Lisp.Types.Cell_Kind
    with
@@ -45,11 +46,12 @@ package Lisp.Store with SPARK_Mode is
      (S     : in out Arena;
       Value : in Lisp.Types.Lisp_Int;
       Ref   : out Lisp.Types.Cell_Ref;
-      Error : out Lisp.Types.Error_Code)
+     Error : out Lisp.Types.Error_Code)
    with
      Pre  => Valid (S),
      Post =>
        Valid (S)
+       and then (for all I in 1 .. Cell_Count (S'Old) => Is_Valid_Ref (S, I))
        and then
        (if Lisp.Types."=" (Error, Lisp.Types.Error_None) then
            Is_Valid_Ref (S, Ref)
@@ -61,11 +63,12 @@ package Lisp.Store with SPARK_Mode is
      (S     : in out Arena;
       Value : in Lisp.Types.Symbol_Id;
       Ref   : out Lisp.Types.Cell_Ref;
-      Error : out Lisp.Types.Error_Code)
+     Error : out Lisp.Types.Error_Code)
    with
      Pre  => Valid (S),
      Post =>
        Valid (S)
+       and then (for all I in 1 .. Cell_Count (S'Old) => Is_Valid_Ref (S, I))
        and then
        (if Lisp.Types."=" (Error, Lisp.Types.Error_None) then
            Is_Valid_Ref (S, Ref)
@@ -78,11 +81,12 @@ package Lisp.Store with SPARK_Mode is
       Left  : in Lisp.Types.Cell_Ref;
       Right : in Lisp.Types.Cell_Ref;
       Ref   : out Lisp.Types.Cell_Ref;
-      Error : out Lisp.Types.Error_Code)
+     Error : out Lisp.Types.Error_Code)
    with
      Pre  => Valid (S),
      Post =>
        Valid (S)
+       and then (for all I in 1 .. Cell_Count (S'Old) => Is_Valid_Ref (S, I))
        and then
        (if Lisp.Types."=" (Error, Lisp.Types.Error_None) then
            Is_Valid_Ref (S, Ref)
@@ -94,11 +98,12 @@ package Lisp.Store with SPARK_Mode is
      (S     : in out Arena;
       Prim  : in Lisp.Types.Primitive_Kind;
       Ref   : out Lisp.Types.Cell_Ref;
-      Error : out Lisp.Types.Error_Code)
+     Error : out Lisp.Types.Error_Code)
    with
      Pre  => Valid (S),
      Post =>
        Valid (S)
+       and then (for all I in 1 .. Cell_Count (S'Old) => Is_Valid_Ref (S, I))
        and then
        (if Lisp.Types."=" (Error, Lisp.Types.Error_None) then
            Is_Valid_Ref (S, Ref)
@@ -117,6 +122,7 @@ package Lisp.Store with SPARK_Mode is
      Pre  => Valid (S),
      Post =>
        Valid (S)
+       and then (for all I in 1 .. Cell_Count (S'Old) => Is_Valid_Ref (S, I))
        and then
        (if Lisp.Types."=" (Error, Lisp.Types.Error_None) then
            Is_Valid_Ref (S, Ref)
@@ -170,6 +176,8 @@ private
 
    function Is_Valid_Ref (S : Arena; Ref : Lisp.Types.Cell_Ref) return Boolean is
      (Ref /= Lisp.Types.No_Ref and then Ref < S.Next_Free);
+
+   function Cell_Count (S : Arena) return Natural is (S.Next_Free - 1);
 
    function Kind_Of (S : Arena; Ref : Lisp.Types.Cell_Ref) return Lisp.Types.Cell_Kind is
      (S.Cells (Positive (Ref)).Kind);
