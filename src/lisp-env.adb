@@ -34,6 +34,44 @@ package body Lisp.Env with SPARK_Mode is
         else
            Frame_Parent_Valid (Env_State, Frame));
 
+   procedure Prove_Names_Unique_From_Bindings
+     (Names : in Lisp.Types.Symbol_Id_Array)
+   with
+     Ghost,
+     Pre =>
+       (for all K in Names'Range => Names_Binding_Unique (Names, K)),
+     Post =>
+       Names_Unique (Names);
+
+   procedure Prove_Preserved_Frame
+     (Old_State : in State;
+      New_State : in State;
+      Frame     : in Positive)
+   with
+     Ghost,
+     Pre =>
+       Valid (Old_State)
+       and then Frame in 1 .. Old_State.Next_Free - 1
+       and then New_State.Frames (Frame) = Old_State.Frames (Frame),
+     Post =>
+       Frame_Names_Unique (New_State.Frames (Frame))
+       and then
+       (if Frame = 1 then
+           New_State.Frames (Frame).Parent = Lisp.Types.No_Frame
+        else
+           Frame_Parent_Valid (New_State, Frame));
+
+   procedure Prove_Preserved_Frame_Names_Unique
+     (Old_Frame : in Frame_Record;
+      New_Frame : in Frame_Record)
+   with
+     Ghost,
+     Pre =>
+       Frame_Names_Unique (Old_Frame)
+       and then New_Frame = Old_Frame,
+     Post =>
+       Frame_Names_Unique (New_Frame);
+
    function Old_Frames_Preserved
      (Old_State : State;
       New_State : State;
@@ -55,8 +93,6 @@ package body Lisp.Env with SPARK_Mode is
                Values => (others => Lisp.Types.No_Ref))));
    end Initialize;
 
-   function Frame_Count (Env_State : State) return Natural is (Env_State.Next_Free - 1);
-
    procedure Prove_Valid_Frame
      (Env_State : in State;
       Frame     : in Positive) is
@@ -68,6 +104,64 @@ package body Lisp.Env with SPARK_Mode is
       end if;
       pragma Assert (Frame_Names_Unique (Env_State, Frame));
    end Prove_Valid_Frame;
+
+   procedure Prove_Names_Unique_From_Bindings
+     (Names : in Lisp.Types.Symbol_Id_Array) is
+   begin
+      pragma Assert (Names_Unique (Names));
+   end Prove_Names_Unique_From_Bindings;
+
+   procedure Prove_Preserved_Frame
+     (Old_State : in State;
+      New_State : in State;
+      Frame     : in Positive) is
+   begin
+      Prove_Valid_Frame (Old_State, Frame);
+      pragma Assert (New_State.Frames (Frame) = Old_State.Frames (Frame));
+      Prove_Preserved_Frame_Names_Unique
+        (Old_State.Frames (Frame), New_State.Frames (Frame));
+      if Frame = 1 then
+         pragma Assert (New_State.Frames (Frame).Parent = Lisp.Types.No_Frame);
+      else
+         pragma Assert
+           (New_State.Frames (Frame).Parent = Old_State.Frames (Frame).Parent);
+         pragma Assert (Frame_Parent_Valid (New_State, Frame));
+      end if;
+   end Prove_Preserved_Frame;
+
+   procedure Prove_Preserved_Frame_Names_Unique
+     (Old_Frame : in Frame_Record;
+      New_Frame : in Frame_Record) is
+   begin
+      pragma Assert (Frame_Names_Unique (Old_Frame));
+      pragma Assert (New_Frame = Old_Frame);
+      pragma Assert (New_Frame.Count = Old_Frame.Count);
+      for I in 1 .. New_Frame.Count loop
+         pragma Loop_Invariant (I in 1 .. New_Frame.Count + 1);
+         pragma Loop_Invariant
+           ((for all K in 1 .. I - 1 => New_Frame.Names (K) = Old_Frame.Names (K)));
+         pragma Loop_Invariant
+           ((for all K in 1 .. I - 1 =>
+               (if K > 1 then
+                   (for all J in 1 .. K - 1 =>
+                      New_Frame.Names (K) /= New_Frame.Names (J))
+                else
+                   True)));
+         if I > 1 then
+            pragma Assert
+              ((for all J in 1 .. I - 1 =>
+                  Old_Frame.Names (I) /= Old_Frame.Names (J)));
+            pragma Assert
+              ((for all J in 1 .. I - 1 =>
+                  New_Frame.Names (J) = Old_Frame.Names (J)));
+            pragma Assert (New_Frame.Names (I) = Old_Frame.Names (I));
+            pragma Assert
+              ((for all J in 1 .. I - 1 =>
+                  New_Frame.Names (I) /= New_Frame.Names (J)));
+         end if;
+      end loop;
+      pragma Assert (Frame_Names_Unique (New_Frame));
+   end Prove_Preserved_Frame_Names_Unique;
 
    procedure Lookup
      (Env_State : in State;
@@ -109,17 +203,23 @@ package body Lisp.Env with SPARK_Mode is
               ((for all J in 1 .. Env_State.Frames (1).Count =>
                   Env_State.Frames (1).Names (J) = Old_State.Frames (1).Names (J)));
             pragma Assert (Non_Global_Frames_Preserved (Old_State, Env_State));
+            pragma Assert (Env_State.Next_Free = Old_State.Next_Free);
             for F in 2 .. Env_State.Next_Free - 1 loop
                pragma Loop_Invariant (F in 2 .. Env_State.Next_Free);
+               pragma Loop_Invariant
+                 ((for all J in 2 .. F - 1 => Env_State.Frames (J) = Old_State.Frames (J)));
                pragma Loop_Invariant
                  ((for all J in 2 .. F - 1 => Frame_Parent_Valid (Env_State, J)));
                pragma Loop_Invariant
                  ((for all J in 2 .. F - 1 => Frame_Names_Unique (Env_State.Frames (J))));
-               Prove_Valid_Frame (Old_State, F);
                pragma Assert (Env_State.Frames (F) = Old_State.Frames (F));
+               Prove_Preserved_Frame (Old_State, Env_State, F);
                pragma Assert (Frame_Parent_Valid (Env_State, F));
                pragma Assert (Frame_Names_Unique (Env_State.Frames (F)));
             end loop;
+            pragma Assert
+              ((for all J in 2 .. Env_State.Next_Free - 1 =>
+                  Env_State.Frames (J) = Old_State.Frames (J)));
             pragma Assert
               ((for all J in 2 .. Env_State.Next_Free - 1 => Frame_Parent_Valid (Env_State, J)));
             pragma Assert
@@ -162,17 +262,23 @@ package body Lisp.Env with SPARK_Mode is
       end loop;
       pragma Assert (Frame_Names_Unique (Env_State.Frames (1)));
       pragma Assert (Non_Global_Frames_Preserved (Old_State, Env_State));
+      pragma Assert (Env_State.Next_Free = Old_State.Next_Free);
       for F in 2 .. Env_State.Next_Free - 1 loop
          pragma Loop_Invariant (F in 2 .. Env_State.Next_Free);
+         pragma Loop_Invariant
+           ((for all J in 2 .. F - 1 => Env_State.Frames (J) = Old_State.Frames (J)));
          pragma Loop_Invariant
            ((for all J in 2 .. F - 1 => Frame_Parent_Valid (Env_State, J)));
          pragma Loop_Invariant
            ((for all J in 2 .. F - 1 => Frame_Names_Unique (Env_State.Frames (J))));
-         Prove_Valid_Frame (Old_State, F);
          pragma Assert (Env_State.Frames (F) = Old_State.Frames (F));
+         Prove_Preserved_Frame (Old_State, Env_State, F);
          pragma Assert (Frame_Parent_Valid (Env_State, F));
          pragma Assert (Frame_Names_Unique (Env_State.Frames (F)));
       end loop;
+      pragma Assert
+        ((for all J in 2 .. Env_State.Next_Free - 1 =>
+            Env_State.Frames (J) = Old_State.Frames (J)));
       pragma Assert
         ((for all J in 2 .. Env_State.Next_Free - 1 => Frame_Parent_Valid (Env_State, J)));
       pragma Assert
@@ -204,6 +310,8 @@ package body Lisp.Env with SPARK_Mode is
 
       for I in Names'Range loop
          pragma Loop_Invariant (I in Names'Range);
+         pragma Loop_Invariant
+           ((for all K in Names'First .. I - 1 => Names_Binding_Unique (Names, K)));
          for J in Names'First .. I - 1 loop
             pragma Loop_Invariant (J in Names'First .. I);
             pragma Loop_Invariant
@@ -214,8 +322,11 @@ package body Lisp.Env with SPARK_Mode is
                return;
             end if;
          end loop;
+         if I > Names'First then
+            pragma Assert (Names_Binding_Unique (Names, I));
+         end if;
       end loop;
-      pragma Assume (Names_Unique (Names));
+      Prove_Names_Unique_From_Bindings (Names);
 
       if Env_State.Next_Free = Lisp.Config.Max_Frames + 1 then
          Frame := Lisp.Types.No_Frame;
@@ -240,6 +351,9 @@ package body Lisp.Env with SPARK_Mode is
                         Env_State.Frames (Positive (Frame)).Names (J))
                 else
                    True)));
+         pragma Loop_Invariant
+           ((for all K in 1 .. I - 1 =>
+               Env_State.Frames (Positive (Frame)).Names (K) = Names (K)));
          if I > 1 then
             pragma Assert
               ((for all J in 1 .. I - 1 =>
@@ -257,17 +371,23 @@ package body Lisp.Env with SPARK_Mode is
       end loop;
       pragma Assert (Frame_Names_Unique (Env_State.Frames (Positive (Frame))));
       pragma Assert (Old_Frames_Preserved (Old_State, Env_State, Positive (Frame)));
+      pragma Assert (Positive (Frame) = Old_State.Next_Free);
       for F in 2 .. Positive (Frame) - 1 loop
          pragma Loop_Invariant (F in 2 .. Positive (Frame));
+         pragma Loop_Invariant
+           ((for all J in 2 .. F - 1 => Env_State.Frames (J) = Old_State.Frames (J)));
          pragma Loop_Invariant
            ((for all J in 2 .. F - 1 => Frame_Parent_Valid (Env_State, J)));
          pragma Loop_Invariant
            ((for all J in 2 .. F - 1 => Frame_Names_Unique (Env_State.Frames (J))));
-         Prove_Valid_Frame (Old_State, F);
          pragma Assert (Env_State.Frames (F) = Old_State.Frames (F));
+         Prove_Preserved_Frame (Old_State, Env_State, F);
          pragma Assert (Frame_Parent_Valid (Env_State, F));
          pragma Assert (Frame_Names_Unique (Env_State.Frames (F)));
       end loop;
+      pragma Assert
+        ((for all J in 2 .. Positive (Frame) - 1 =>
+            Env_State.Frames (J) = Old_State.Frames (J)));
       pragma Assert
         ((for all J in 2 .. Positive (Frame) - 1 => Frame_Parent_Valid (Env_State, J)));
       pragma Assert

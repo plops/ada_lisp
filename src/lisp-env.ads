@@ -9,6 +9,12 @@ package Lisp.Env with SPARK_Mode is
    procedure Initialize (Env_State : in out State) with Post => Valid (Env_State);
    function Valid (Env_State : State) return Boolean;
    function Frame_Count (Env_State : State) return Natural;
+   function Frame_Valid
+     (Env_State : State;
+      Frame     : Lisp.Types.Frame_Id) return Boolean;
+   function Frames_Preserved
+     (Old_State : State;
+      New_State : State) return Boolean;
 
    procedure Lookup
      (Env_State : in State;
@@ -22,8 +28,11 @@ package Lisp.Env with SPARK_Mode is
      (Env_State : in out State;
       Name      : in Lisp.Types.Symbol_Id;
       Value     : in Lisp.Types.Cell_Ref;
-      Error     : out Lisp.Types.Error_Code)
-   with Pre => Valid (Env_State), Post => Valid (Env_State);
+     Error     : out Lisp.Types.Error_Code)
+   with
+     Pre => Valid (Env_State),
+     Post => Valid (Env_State)
+       and then Frames_Preserved (Env_State'Old, Env_State);
 
    procedure Push_Frame
      (Env_State : in out State;
@@ -37,7 +46,13 @@ package Lisp.Env with SPARK_Mode is
        and then Parent in 1 .. Frame_Count (Env_State)
        and then Names'First = 1
        and then Values'First = 1,
-     Post => Valid (Env_State);
+     Post => Valid (Env_State)
+       and then Frames_Preserved (Env_State'Old, Env_State)
+       and then
+       (if Lisp.Types."=" (Error, Lisp.Types.Error_None) then
+           Frame in 1 .. Frame_Count (Env_State)
+        else
+           Frame = Lisp.Types.No_Frame);
 
 private
    subtype Binding_Index is Positive range 1 .. Lisp.Config.Max_Frame_Bindings;
@@ -127,4 +142,16 @@ private
                   Frame_Parent_Valid (Env_State, F))
       and then (for all F in 1 .. Env_State.Next_Free - 1 =>
                   Frame_Names_Unique (Env_State, F)));
+
+   function Frame_Count (Env_State : State) return Natural is (Env_State.Next_Free - 1);
+
+   function Frame_Valid
+     (Env_State : State;
+      Frame     : Lisp.Types.Frame_Id) return Boolean is
+     (Frame in 1 .. Env_State.Next_Free - 1);
+
+   function Frames_Preserved
+     (Old_State : State;
+      New_State : State) return Boolean is
+     (New_State.Next_Free >= Old_State.Next_Free);
 end Lisp.Env;

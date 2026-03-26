@@ -1,3 +1,4 @@
+with Lisp.Env;
 with Lisp.Runtime;
 with Lisp.Store;
 with Lisp.Types;
@@ -16,6 +17,8 @@ package Lisp.Primitives with SPARK_Mode is
        and then Arg_Count <= Args'Length
        and then (for all I in 1 .. Arg_Count => Lisp.Store.Is_Valid_Ref (RT.Store, Args (I))),
      Post => Lisp.Runtime.Valid (RT)
+       and then Lisp.Store.Cell_Count (RT.Store) >= Lisp.Store.Cell_Count (RT.Store'Old)
+       and then Lisp.Env.Frames_Preserved (RT.Env'Old, RT.Env)
        and then
        (if Lisp.Types."=" (Error, Lisp.Types.Error_None) then
            Lisp.Store.Is_Valid_Ref (RT.Store, Result_Ref)

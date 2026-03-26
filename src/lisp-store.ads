@@ -46,10 +46,18 @@ package Lisp.Store with SPARK_Mode is
      Pre => Is_Valid_Ref (S, Ref) and then Kind_Of (S, Ref) = Lisp.Types.Primitive_Cell;
    function Closure_Params (S : Arena; Ref : Lisp.Types.Cell_Ref) return Lisp.Types.Cell_Ref
    with
-     Pre => Valid (S) and then Is_Valid_Ref (S, Ref) and then Kind_Of (S, Ref) = Lisp.Types.Closure_Cell;
+     Pre => Valid (S) and then Is_Valid_Ref (S, Ref) and then Kind_Of (S, Ref) = Lisp.Types.Closure_Cell,
+     Post =>
+       Closure_Params'Result < Ref
+       and then
+       (Closure_Params'Result = Lisp.Types.No_Ref or else Is_Valid_Ref (S, Closure_Params'Result));
    function Closure_Body (S : Arena; Ref : Lisp.Types.Cell_Ref) return Lisp.Types.Cell_Ref
    with
-     Pre => Valid (S) and then Is_Valid_Ref (S, Ref) and then Kind_Of (S, Ref) = Lisp.Types.Closure_Cell;
+     Pre => Valid (S) and then Is_Valid_Ref (S, Ref) and then Kind_Of (S, Ref) = Lisp.Types.Closure_Cell,
+     Post =>
+       Closure_Body'Result < Ref
+       and then
+       (Closure_Body'Result = Lisp.Types.No_Ref or else Is_Valid_Ref (S, Closure_Body'Result));
    function Closure_Frame (S : Arena; Ref : Lisp.Types.Cell_Ref) return Lisp.Types.Frame_Id
    with
      Pre => Is_Valid_Ref (S, Ref) and then Kind_Of (S, Ref) = Lisp.Types.Closure_Cell;
