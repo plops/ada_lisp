@@ -74,8 +74,8 @@ private
    function Binding_Name_Unique
      (Frame_State : Frame_Record;
       Index       : Positive) return Boolean is
-     (if Index < Frame_State.Count then
-         (for all J in Index + 1 .. Frame_State.Count =>
+     (if Index in 1 .. Frame_State.Count and then Index > 1 then
+         (for all J in 1 .. Index - 1 =>
             Frame_State.Names (Index) /= Frame_State.Names (J))
       else
          True);
@@ -83,8 +83,8 @@ private
    function Frame_Names_Unique
      (Frame_State : Frame_Record) return Boolean is
      (for all I in 1 .. Frame_State.Count =>
-        (if I < Frame_State.Count then
-            (for all J in I + 1 .. Frame_State.Count =>
+        (if I > 1 then
+            (for all J in 1 .. I - 1 =>
                Frame_State.Names (I) /= Frame_State.Names (J))
          else
             True));
@@ -107,15 +107,15 @@ private
    function Names_Binding_Unique
      (Names : Lisp.Types.Symbol_Id_Array;
       Index : Positive) return Boolean is
-     (if Index in Names'Range and then Index < Names'Last then
-         (for all J in Index + 1 .. Names'Last => Names (Index) /= Names (J))
+     (if Index in Names'Range and then Index > Names'First then
+         (for all J in Names'First .. Index - 1 => Names (Index) /= Names (J))
       else
          True);
 
    function Names_Unique (Names : Lisp.Types.Symbol_Id_Array) return Boolean is
      (for all I in Names'Range =>
-        (if I < Names'Last then
-            (for all J in I + 1 .. Names'Last => Names (I) /= Names (J))
+        (if I > Names'First then
+            (for all J in Names'First .. I - 1 => Names (I) /= Names (J))
          else
             True));
 
