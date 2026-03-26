@@ -9,16 +9,11 @@ package body Lisp.Runtime with SPARK_Mode is
       Name_Id : out Lisp.Types.Symbol_Id;
       Error   : out Lisp.Types.Error_Code)
    with
-     Pre  => Lisp.Symbols.Valid (RT.Symbols)
-       and then Lisp.Store.Valid (RT.Store)
-       and then Lisp.Env.Valid (RT.Env)
+     Pre  => Valid (RT)
        and then Name'First = 1
        and then First in Name'Range
        and then Last in First .. Name'Last,
-     Post => (if Lisp.Types."=" (Error, Lisp.Types.Error_None) then
-                 Lisp.Symbols.Valid (RT.Symbols)
-                 and then Lisp.Store.Valid (RT.Store)
-                 and then Lisp.Env.Valid (RT.Env));
+     Post => Valid (RT);
 
    procedure Bind_Primitive
      (RT      : in out State;
@@ -26,13 +21,8 @@ package body Lisp.Runtime with SPARK_Mode is
       Prim    : in Lisp.Types.Primitive_Kind;
       Error   : out Lisp.Types.Error_Code)
    with
-     Pre  => Lisp.Symbols.Valid (RT.Symbols)
-       and then Lisp.Store.Valid (RT.Store)
-       and then Lisp.Env.Valid (RT.Env),
-     Post => (if Lisp.Types."=" (Error, Lisp.Types.Error_None) then
-                 Lisp.Symbols.Valid (RT.Symbols)
-                 and then Lisp.Store.Valid (RT.Store)
-                 and then Lisp.Env.Valid (RT.Env)) is
+     Pre  => Valid (RT),
+     Post => Valid (RT) is
       Ref : Lisp.Types.Cell_Ref;
    begin
       Lisp.Store.Make_Primitive (RT.Store, Prim, Ref, Error);

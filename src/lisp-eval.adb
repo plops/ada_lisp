@@ -17,8 +17,13 @@ package body Lisp.Eval with SPARK_Mode is
       Count       : out Natural;
       Error       : out Lisp.Types.Error_Code)
    with
-     Pre => Lisp.Runtime.Valid (RT),
-     Post => Lisp.Runtime.Valid (RT);
+     Pre => Lisp.Runtime.Valid (RT)
+       and then (List_Ref = Lisp.Store.Nil_Ref or else Lisp.Store.Is_Valid_Ref (RT.Store, List_Ref)),
+     Post => Lisp.Runtime.Valid (RT)
+       and then Count <= Elements'Length
+       and then
+       (if Lisp.Types."=" (Error, Lisp.Types.Error_None) then
+           (for all I in 1 .. Count => Lisp.Store.Is_Valid_Ref (RT.Store, Elements (I))));
 
    procedure Params_To_Array
      (RT       : in Lisp.Runtime.State;
@@ -27,8 +32,10 @@ package body Lisp.Eval with SPARK_Mode is
       Count    : out Natural;
       Error    : out Lisp.Types.Error_Code)
    with
-     Pre => Lisp.Runtime.Valid (RT),
-     Post => Lisp.Runtime.Valid (RT);
+     Pre => Lisp.Runtime.Valid (RT)
+       and then (List_Ref = Lisp.Store.Nil_Ref or else Lisp.Store.Is_Valid_Ref (RT.Store, List_Ref)),
+     Post => Lisp.Runtime.Valid (RT)
+       and then Count <= Names'Length;
 
    procedure Eval_List
      (RT            : in out Lisp.Runtime.State;
@@ -39,8 +46,13 @@ package body Lisp.Eval with SPARK_Mode is
       Count         : out Natural;
       Error         : out Lisp.Types.Error_Code)
    with
-     Pre => Lisp.Runtime.Valid (RT),
-     Post => Lisp.Runtime.Valid (RT),
+     Pre => Lisp.Runtime.Valid (RT)
+       and then (List_Ref = Lisp.Store.Nil_Ref or else Lisp.Store.Is_Valid_Ref (RT.Store, List_Ref)),
+     Post => Lisp.Runtime.Valid (RT)
+       and then Count <= Values'Length
+       and then
+       (if Lisp.Types."=" (Error, Lisp.Types.Error_None) then
+           (for all I in 1 .. Count => Lisp.Store.Is_Valid_Ref (RT.Store, Values (I)))),
      Subprogram_Variant => (Decreases => Fuel);
 
    procedure Eval_Begin
@@ -51,8 +63,14 @@ package body Lisp.Eval with SPARK_Mode is
       Result_Ref    : out Lisp.Types.Cell_Ref;
       Error         : out Lisp.Types.Error_Code)
    with
-     Pre => Lisp.Runtime.Valid (RT),
-     Post => Lisp.Runtime.Valid (RT),
+     Pre => Lisp.Runtime.Valid (RT)
+       and then (Forms = Lisp.Store.Nil_Ref or else Lisp.Store.Is_Valid_Ref (RT.Store, Forms)),
+     Post => Lisp.Runtime.Valid (RT)
+       and then
+       (if Lisp.Types."=" (Error, Lisp.Types.Error_None) then
+           Lisp.Store.Is_Valid_Ref (RT.Store, Result_Ref)
+        else
+           Result_Ref = Lisp.Types.No_Ref),
      Subprogram_Variant => (Decreases => Fuel);
 
    procedure Proper_List_To_Array

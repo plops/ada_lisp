@@ -16,18 +16,17 @@ package body Lisp.Parser with SPARK_Mode is
       Next_Pos : out Positive;
       Error    : out Lisp.Types.Error_Code)
    with
-     Pre => Lisp.Symbols.Valid (RT.Symbols)
-       and then Lisp.Store.Valid (RT.Store)
-       and then Lisp.Env.Valid (RT.Env)
+     Pre => Lisp.Runtime.Valid (RT)
        and then Source'First = 1
        and then Pos in Source'Range
        and then Source'Last < Natural'Last,
-     Post => Next_Pos > 0
+     Post => Next_Pos in Pos .. Source'Last + 1
+       and then Lisp.Runtime.Valid (RT)
        and then
        (if Lisp.Types."=" (Error, Lisp.Types.Error_None) then
-           Lisp.Symbols.Valid (RT.Symbols)
-           and then Lisp.Store.Valid (RT.Store)
-           and then Lisp.Env.Valid (RT.Env));
+           Lisp.Store.Is_Valid_Ref (RT.Store, Ref)
+        else
+           Ref = Lisp.Types.No_Ref);
 
    procedure Scan_Token
      (Source   : in String;
@@ -51,14 +50,11 @@ package body Lisp.Parser with SPARK_Mode is
       Sym_Id  : out Lisp.Types.Symbol_Id;
       Error   : out Lisp.Types.Error_Code)
    with
-     Pre => Lisp.Symbols.Valid (RT.Symbols)
-       and then Lisp.Store.Valid (RT.Store)
+     Pre => Lisp.Runtime.Valid (RT)
        and then Source'First = 1
        and then First in Source'Range
        and then Last in First .. Source'Last,
-     Post => (if Lisp.Types."=" (Error, Lisp.Types.Error_None) then
-                 Lisp.Symbols.Valid (RT.Symbols)
-                 and then Lisp.Store.Valid (RT.Store));
+     Post => Lisp.Runtime.Valid (RT);
 
    procedure Make_Integer_Cell
      (RT    : in out Lisp.Runtime.State;
@@ -66,8 +62,13 @@ package body Lisp.Parser with SPARK_Mode is
       Ref   : out Lisp.Types.Cell_Ref;
       Error : out Lisp.Types.Error_Code)
    with
-     Pre => Lisp.Store.Valid (RT.Store),
-     Post => (if Lisp.Types."=" (Error, Lisp.Types.Error_None) then Lisp.Store.Valid (RT.Store));
+     Pre => Lisp.Runtime.Valid (RT),
+     Post => Lisp.Runtime.Valid (RT)
+       and then
+       (if Lisp.Types."=" (Error, Lisp.Types.Error_None) then
+           Lisp.Store.Is_Valid_Ref (RT.Store, Ref)
+        else
+           Ref = Lisp.Types.No_Ref);
 
    procedure Make_Symbol_Cell
      (RT    : in out Lisp.Runtime.State;
@@ -75,8 +76,13 @@ package body Lisp.Parser with SPARK_Mode is
       Ref   : out Lisp.Types.Cell_Ref;
       Error : out Lisp.Types.Error_Code)
    with
-     Pre => Lisp.Store.Valid (RT.Store),
-     Post => (if Lisp.Types."=" (Error, Lisp.Types.Error_None) then Lisp.Store.Valid (RT.Store));
+     Pre => Lisp.Runtime.Valid (RT),
+     Post => Lisp.Runtime.Valid (RT)
+       and then
+       (if Lisp.Types."=" (Error, Lisp.Types.Error_None) then
+           Lisp.Store.Is_Valid_Ref (RT.Store, Ref)
+        else
+           Ref = Lisp.Types.No_Ref);
 
    procedure Make_Cons_Cell
      (RT    : in out Lisp.Runtime.State;
@@ -85,8 +91,13 @@ package body Lisp.Parser with SPARK_Mode is
       Ref   : out Lisp.Types.Cell_Ref;
       Error : out Lisp.Types.Error_Code)
    with
-     Pre => Lisp.Store.Valid (RT.Store),
-     Post => (if Lisp.Types."=" (Error, Lisp.Types.Error_None) then Lisp.Store.Valid (RT.Store));
+     Pre => Lisp.Runtime.Valid (RT),
+     Post => Lisp.Runtime.Valid (RT)
+       and then
+       (if Lisp.Types."=" (Error, Lisp.Types.Error_None) then
+           Lisp.Store.Is_Valid_Ref (RT.Store, Ref)
+        else
+           Ref = Lisp.Types.No_Ref);
 
    procedure Make_List
      (RT         : in out Lisp.Runtime.State;
@@ -96,9 +107,16 @@ package body Lisp.Parser with SPARK_Mode is
       Ref        : out Lisp.Types.Cell_Ref;
       Error      : out Lisp.Types.Error_Code)
    with
-     Pre  => Lisp.Store.Valid (RT.Store)
-       and then Elem_Count <= Elements'Length,
-     Post => (if Lisp.Types."=" (Error, Lisp.Types.Error_None) then Lisp.Store.Valid (RT.Store)) is
+     Pre  => Lisp.Runtime.Valid (RT)
+       and then Elem_Count <= Elements'Length
+       and then (for all I in 1 .. Elem_Count => Lisp.Store.Is_Valid_Ref (RT.Store, Elements (I)))
+       and then (Tail = Lisp.Store.Nil_Ref or else Lisp.Store.Is_Valid_Ref (RT.Store, Tail)),
+     Post => Lisp.Runtime.Valid (RT)
+       and then
+       (if Lisp.Types."=" (Error, Lisp.Types.Error_None) then
+           Lisp.Store.Is_Valid_Ref (RT.Store, Ref)
+        else
+           Ref = Lisp.Types.No_Ref) is
       Result : Lisp.Types.Cell_Ref := Tail;
    begin
       for I in reverse 1 .. Elem_Count loop
@@ -172,18 +190,17 @@ package body Lisp.Parser with SPARK_Mode is
       Next_Pos : out Positive;
       Error    : out Lisp.Types.Error_Code)
    with
-     Pre => Lisp.Symbols.Valid (RT.Symbols)
-       and then Lisp.Store.Valid (RT.Store)
-       and then Lisp.Env.Valid (RT.Env)
+     Pre => Lisp.Runtime.Valid (RT)
        and then Source'First = 1
        and then Pos in Source'Range
        and then Source'Last < Natural'Last,
-     Post => Next_Pos > 0
+     Post => Next_Pos in Pos .. Source'Last + 1
+       and then Lisp.Runtime.Valid (RT)
        and then
        (if Lisp.Types."=" (Error, Lisp.Types.Error_None) then
-           Lisp.Symbols.Valid (RT.Symbols)
-           and then Lisp.Store.Valid (RT.Store)
-           and then Lisp.Env.Valid (RT.Env)) is
+           Lisp.Store.Is_Valid_Ref (RT.Store, Ref)
+        else
+           Ref = Lisp.Types.No_Ref) is
       Tok       : Lisp.Lexer.Token;
       Cursor    : Positive := Pos;
       Elements  : Lisp.Types.Cell_Ref_Array (1 .. Lisp.Config.Max_List_Elements) := (others => Lisp.Types.No_Ref);

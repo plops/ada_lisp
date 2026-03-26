@@ -12,7 +12,12 @@ package body Lisp.Driver with SPARK_Mode is
    use type Lisp.Types.Error_Code;
    use type Lisp.Lexer.Token_Kind;
 
-   function To_One_Based (Source : String) return String is
+   function To_One_Based (Source : String) return String
+   with
+     Post =>
+       To_One_Based'Result'Length = Source'Length
+       and then (if Source'Length > 0 then To_One_Based'Result'First = 1)
+   is
    begin
       if Source'Length = 0 then
          return "";
@@ -45,6 +50,11 @@ package body Lisp.Driver with SPARK_Mode is
       declare
          Normalized : constant String := To_One_Based (Source);
       begin
+         if Normalized'Last >= Natural'Last then
+            Error := Lisp.Types.Error_Syntax;
+            return;
+         end if;
+
          Lisp.Runtime.Initialize (RT, Error);
          if Error /= Lisp.Types.Error_None then
             return;

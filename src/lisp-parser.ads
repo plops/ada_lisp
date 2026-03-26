@@ -11,18 +11,17 @@ package Lisp.Parser with SPARK_Mode is
       RT       : in out Lisp.Runtime.State;
       Ref      : out Lisp.Types.Cell_Ref;
       Next_Pos : out Natural;
-     Error    : out Lisp.Types.Error_Code)
+      Error    : out Lisp.Types.Error_Code)
    with
-     Pre => Lisp.Symbols.Valid (RT.Symbols)
-       and then Lisp.Store.Valid (RT.Store)
-       and then Lisp.Env.Valid (RT.Env)
+     Pre => Lisp.Runtime.Valid (RT)
        and then Source'First = 1
        and then Pos in Source'Range
        and then Source'Last < Natural'Last,
-     Post => Next_Pos > 0
+     Post => Next_Pos in Pos .. Source'Last + 1
+       and then Lisp.Runtime.Valid (RT)
        and then
        (if Lisp.Types."=" (Error, Lisp.Types.Error_None) then
-           Lisp.Symbols.Valid (RT.Symbols)
-           and then Lisp.Store.Valid (RT.Store)
-           and then Lisp.Env.Valid (RT.Env));
+           Lisp.Store.Is_Valid_Ref (RT.Store, Ref)
+        else
+           Ref = Lisp.Types.No_Ref);
 end Lisp.Parser;

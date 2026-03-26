@@ -1,4 +1,5 @@
 with Lisp.Runtime;
+with Lisp.Store;
 with Lisp.Types;
 
 package Lisp.Eval with SPARK_Mode is
@@ -10,7 +11,13 @@ package Lisp.Eval with SPARK_Mode is
       Result_Ref    : out Lisp.Types.Cell_Ref;
       Error         : out Lisp.Types.Error_Code)
    with
-     Pre => Lisp.Runtime.Valid (RT),
-     Post => Lisp.Runtime.Valid (RT),
+     Pre => Lisp.Runtime.Valid (RT)
+       and then Lisp.Store.Is_Valid_Ref (RT.Store, Expr),
+     Post => Lisp.Runtime.Valid (RT)
+       and then
+       (if Lisp.Types."=" (Error, Lisp.Types.Error_None) then
+           Lisp.Store.Is_Valid_Ref (RT.Store, Result_Ref)
+        else
+           Result_Ref = Lisp.Types.No_Ref),
      Subprogram_Variant => (Decreases => Fuel);
 end Lisp.Eval;

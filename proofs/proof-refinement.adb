@@ -22,7 +22,10 @@ procedure Proof.Refinement with SPARK_Mode is
       Model_Error  : Lisp.Types.Error_Code;
       Exec_Error   : Lisp.Types.Error_Code;
    begin
-      if Source'Length = 0 or else Source'First /= 1 then
+      if Source'Length = 0
+        or else Source'First /= 1
+        or else Source'Last >= Natural'Last
+      then
          return;
       end if;
 
