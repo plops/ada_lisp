@@ -57,42 +57,58 @@ private
    end record;
 
    function Frame_Parent_Valid
+     (Frame_State : Frame_Record;
+      Frame       : Positive) return Boolean is
+     (Frame_State.Parent /= Lisp.Types.No_Frame
+      and then Frame_State.Parent < Frame)
+   with
+     Pre => Frame in 1 .. Lisp.Config.Max_Frames;
+
+   function Frame_Parent_Valid
      (Env_State : State;
       Frame     : Positive) return Boolean is
-     (Env_State.Frames (Frame).Parent /= Lisp.Types.No_Frame
-      and then Env_State.Frames (Frame).Parent < Frame)
+     (Frame_Parent_Valid (Env_State.Frames (Frame), Frame))
    with
      Pre => Frame in 1 .. Lisp.Config.Max_Frames;
 
    function Binding_Name_Unique
+     (Frame_State : Frame_Record;
+      Index       : Positive) return Boolean is
+     (if Index < Frame_State.Count then
+         (for all J in Index + 1 .. Frame_State.Count =>
+            Frame_State.Names (Index) /= Frame_State.Names (J))
+      else
+         True);
+
+   function Frame_Names_Unique
+     (Frame_State : Frame_Record) return Boolean is
+     (for all I in 1 .. Frame_State.Count => Binding_Name_Unique (Frame_State, I));
+
+   function Binding_Name_Unique
      (Env_State : State;
       Frame     : Positive;
-      Index     : Binding_Index) return Boolean is
-     (for all J in Index + 1 .. Env_State.Frames (Frame).Count =>
-        Env_State.Frames (Frame).Names (Index) /= Env_State.Frames (Frame).Names (J))
+      Index     : Positive) return Boolean is
+     (Binding_Name_Unique (Env_State.Frames (Frame), Index))
    with
      Pre => Frame in 1 .. Lisp.Config.Max_Frames;
 
    function Frame_Names_Unique
      (Env_State : State;
       Frame     : Positive) return Boolean is
-     (for all I in 1 .. Env_State.Frames (Frame).Count =>
-        (if I < Env_State.Frames (Frame).Count then
-            (for all J in I + 1 .. Env_State.Frames (Frame).Count =>
-               Env_State.Frames (Frame).Names (I) /= Env_State.Frames (Frame).Names (J))
-         else
-            True))
+     (Frame_Names_Unique (Env_State.Frames (Frame)))
    with
      Pre => Frame in 1 .. Lisp.Config.Max_Frames;
 
+   function Names_Binding_Unique
+     (Names : Lisp.Types.Symbol_Id_Array;
+      Index : Positive) return Boolean is
+     (if Index in Names'Range and then Index < Names'Last then
+         (for all J in Index + 1 .. Names'Last => Names (Index) /= Names (J))
+      else
+         True);
+
    function Names_Unique (Names : Lisp.Types.Symbol_Id_Array) return Boolean is
-     (for all I in Names'Range =>
-        (if I < Names'Last then
-            (for all J in I + 1 .. Names'Last => Names (I) /= Names (J))
-         else
-            True))
-   with
-     Pre => Names'First = 1;
+     (for all I in Names'Range => Names_Binding_Unique (Names, I));
 
    function Valid (Env_State : State) return Boolean is
      (Env_State.Next_Free >= 2

@@ -20,40 +20,49 @@ and a small ghost model in `proofs/` for semantic refinement work.
 
 ## Canonical Commands
 
-Build the executable:
+Prefer the repo-local Alire/AdaCore toolchain for build, test, and proof work.
+It carries the intended prover set and is the default path for verification
+iterations in this repository.
+
+Build the executable with the preferred toolchain:
 
 ```bash
-./scripts/build.sh
+./scripts/with-adacore.sh ./scripts/build.sh
 ```
 
-Run regression tests:
+Run regression tests with the preferred toolchain:
 
 ```bash
-./scripts/test.sh
+./scripts/with-adacore.sh ./scripts/test.sh
 ```
 
-Run the default proof gate with the system toolchain:
-
-```bash
-./scripts/prove.sh
-```
-
-Run the default proof gate with the repo-local Alire/AdaCore toolchain:
+Run the default proof gate with the preferred repo-local Alire/AdaCore toolchain:
 
 ```bash
 ./scripts/prove-adacore.sh
 ```
 
-Use the AdaCore toolchain for any other command:
+Use the system toolchain only as a fallback when you explicitly want whatever
+`gnat`, `gprbuild`, and `gnatprove` are on `PATH`:
+
+```bash
+./scripts/build.sh
+./scripts/test.sh
+./scripts/prove.sh
+```
+
+Use the AdaCore toolchain wrapper for any other command:
 
 ```bash
 ./scripts/with-adacore.sh gnatprove --version
-./scripts/with-adacore.sh ./scripts/test.sh
+./scripts/with-adacore.sh gprbuild -P lisp_prove.gpr
 ```
 
 ## Toolchain Notes
 
-The repository supports two modes:
+The repository supports two modes, but the repo-local Alire/AdaCore toolchain is
+preferred because it includes a broader prover setup and matches the intended
+proof environment more closely:
 
 - System toolchain: whatever `gnat`, `gprbuild`, and `gnatprove` are on `PATH`
 - Repo-local Alire toolchain: installed under `.toolchains/adacore-community/`
@@ -74,7 +83,9 @@ not be committed.
 
 `lisp.gpr` is the build-and-test project.
 
-`lisp_prove.gpr` is the proof project. The proof script:
+`lisp_prove.gpr` is the proof project. Prefer `./scripts/prove-adacore.sh` for
+day-to-day proof work; use `./scripts/prove.sh` only when you intentionally want
+to check behavior against the system toolchain. The proof script:
 
 - builds with `gprbuild -P lisp_prove.gpr`
 - runs `gnatprove` in `check_all`, `flow`, then `prove`
