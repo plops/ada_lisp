@@ -137,7 +137,7 @@ package Lisp.Store with SPARK_Mode is
       Body_Expr      : in Lisp.Types.Cell_Ref;
       Captured_Frame : in Lisp.Types.Frame_Id;
       Ref            : out Lisp.Types.Cell_Ref;
-      Error          : out Lisp.Types.Error_Code)
+     Error          : out Lisp.Types.Error_Code)
    with
      Pre  => Valid (S),
      Post =>

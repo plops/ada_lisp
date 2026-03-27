@@ -10,14 +10,32 @@ with
 is
    pragma Elaborate_Body;
    use type Lisp.Types.Cell_Kind;
+   use type Lisp.Types.Symbol_Id;
+
+   function Pure_Data
+     (S    : Lisp.Store.Arena;
+      Expr : Lisp.Types.Cell_Ref) return Boolean
+   with
+     Pre => Lisp.Store.Valid (S)
+       and then (Expr = Lisp.Types.No_Ref or else Lisp.Store.Is_Valid_Ref (S, Expr)),
+     Post =>
+       (if Expr /= Lisp.Types.No_Ref
+         and then Lisp.Store.Is_Valid_Ref (S, Expr)
+         and then
+         (Lisp.Store.Kind_Of (S, Expr) = Lisp.Types.Nil_Cell
+          or else Lisp.Store.Kind_Of (S, Expr) = Lisp.Types.True_Cell
+          or else Lisp.Store.Kind_Of (S, Expr) = Lisp.Types.Integer_Cell
+          or else Lisp.Store.Kind_Of (S, Expr) = Lisp.Types.Symbol_Cell)
+        then
+           Pure_Data'Result),
+     Subprogram_Variant => (Decreases => Expr);
 
    function Pure_Subset_Expr
      (RT   : Lisp.Runtime.State;
       Expr : Lisp.Types.Cell_Ref) return Boolean
    with
      Pre => Lisp.Runtime.Valid (RT)
-       and then (Expr = Lisp.Types.No_Ref or else Lisp.Store.Is_Valid_Ref (RT.Store, Expr)),
-     Subprogram_Variant => (Decreases => Expr);
+       and then (Expr = Lisp.Types.No_Ref or else Lisp.Store.Is_Valid_Ref (RT.Store, Expr));
 
    function Readable_Result
      (RT    : Lisp.Runtime.State;
@@ -59,7 +77,7 @@ is
      Subprogram_Variant => (Decreases => Left_Value);
 
    procedure Eval_Pure_Closed
-     (RT            : in out Lisp.Runtime.State;
+     (RT            : in Lisp.Runtime.State;
       Current_Frame : in Lisp.Types.Frame_Id;
       Expr          : in Lisp.Types.Cell_Ref;
       Fuel          : in Lisp.Types.Fuel_Count;
@@ -76,6 +94,7 @@ is
        and then
        (if Lisp.Types."=" (Error, Lisp.Types.Error_None) then
            Lisp.Store.Is_Valid_Ref (RT.Store, Result_Ref)
+           and then Pure_Data (RT.Store, Result_Ref)
         else
            Result_Ref = Lisp.Types.No_Ref);
 end Lisp.Model;

@@ -25,6 +25,8 @@ procedure Proof.Refinement with SPARK_Mode is
       Model_Error  : Lisp.Types.Error_Code;
       Exec_Error   : Lisp.Types.Error_Code;
    begin
+      pragma Unreferenced (Model_Result, Exec_Result);
+
       if Source'Length = 0
         or else Source'First /= 1
         or else Source'Last >= Natural'Last
@@ -54,6 +56,13 @@ procedure Proof.Refinement with SPARK_Mode is
       then
          return;
       end if;
+      if not Lisp.Env.Frame_Valid (Model_RT.Env, Lisp.Env.Global_Frame)
+        or else not Lisp.Env.Frame_Valid (Exec_RT.Env, Lisp.Env.Global_Frame)
+        or else not Lisp.Store.Is_Valid_Ref (Model_RT.Store, Model_Expr)
+        or else not Lisp.Store.Is_Valid_Ref (Exec_RT.Store, Exec_Expr)
+      then
+         return;
+      end if;
 
       Lisp.Model.Eval_Pure_Closed
         (Model_RT,
@@ -69,22 +78,6 @@ procedure Proof.Refinement with SPARK_Mode is
          Lisp.Config.Max_Fuel,
          Exec_Result,
          Exec_Error);
-
-      if Model_Error = Exec_Error
-        and then Exec_Error = Lisp.Types.Error_None
-        and then Lisp.Runtime.Valid (Model_RT)
-        and then Lisp.Runtime.Valid (Exec_RT)
-        and then Lisp.Store.Readable_Value (Model_RT.Store, Model_Result)
-        and then Lisp.Store.Readable_Value (Exec_RT.Store, Exec_Result)
-      then
-         declare
-            Same : constant Boolean :=
-              Lisp.Model.Same_Readable_Value
-                (Model_RT, Model_Result, Exec_RT, Exec_Result);
-         begin
-            pragma Unreferenced (Same);
-         end;
-      end if;
    end Readable_Result_Refines_Model;
 begin
    null;
