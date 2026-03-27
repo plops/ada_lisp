@@ -62,7 +62,7 @@ package body Lisp.Eval with SPARK_Mode is
        (if Lisp.Types."=" (Error, Lisp.Types.Error_None) then
            (for all I in Values'Range =>
               (if I <= Count then Lisp.Store.Is_Valid_Ref (RT.Store, Values (I))))),
-     Subprogram_Variant => (Decreases => Fuel);
+     Subprogram_Variant => (Decreases => Fuel, Decreases => 0);
 
    procedure Eval_Begin
      (RT            : in out Lisp.Runtime.State;
@@ -83,7 +83,7 @@ package body Lisp.Eval with SPARK_Mode is
            Lisp.Store.Is_Valid_Ref (RT.Store, Result_Ref)
         else
            Result_Ref = Lisp.Types.No_Ref),
-     Subprogram_Variant => (Decreases => Fuel);
+     Subprogram_Variant => (Decreases => Fuel, Decreases => 0);
 
    procedure Proper_List_To_Array
      (RT          : in Lisp.Runtime.State;
@@ -270,6 +270,279 @@ package body Lisp.Eval with SPARK_Mode is
       Error := Lisp.Types.Error_None;
    end Eval_Begin;
 
+   procedure Eval_If_Special
+     (RT            : in out Lisp.Runtime.State;
+      Current_Frame : in Lisp.Types.Frame_Id;
+      Expr          : in Lisp.Types.Cell_Ref;
+      Fuel          : in Lisp.Types.Fuel_Count;
+      Result_Ref    : out Lisp.Types.Cell_Ref;
+      Error         : out Lisp.Types.Error_Code)
+   with
+     Pre => Lisp.Runtime.Valid (RT)
+       and then Lisp.Env.Frame_Valid (RT.Env, Current_Frame)
+       and then Lisp.Store.Is_Valid_Ref (RT.Store, Expr)
+       and then Fuel > 0
+       and then Lisp.Store.Kind_Of (RT.Store, Expr) = Lisp.Types.Cons_Cell
+       and then Lisp.Store.Car (RT.Store, Expr) /= Lisp.Types.No_Ref
+       and then
+         Lisp.Store.Kind_Of (RT.Store, Lisp.Store.Car (RT.Store, Expr)) =
+           Lisp.Types.Symbol_Cell
+       and then
+         Lisp.Store.Symbol_Value (RT.Store, Lisp.Store.Car (RT.Store, Expr)) =
+           RT.Known.If_Id,
+     Post => Lisp.Runtime.Valid (RT)
+       and then Lisp.Store.Cell_Count (RT.Store) >= Lisp.Store.Cell_Count (RT.Store'Old)
+       and then Lisp.Env.Frames_Preserved (RT.Env'Old, RT.Env)
+       and then
+       (if Lisp.Types."=" (Error, Lisp.Types.Error_None) then
+           Lisp.Store.Is_Valid_Ref (RT.Store, Result_Ref)
+        else
+           Result_Ref = Lisp.Types.No_Ref)
+       and then
+       (if Fuel > 1
+         and then RT'Old.Known.If_Id /= RT'Old.Known.Quote_Id
+         and then Lisp.Runtime.If_Immediate_Result_Form (RT'Old, Expr)
+        then
+           Lisp.Types."=" (Error, Lisp.Types.Error_None)
+           and then Result_Ref = Lisp.Runtime.If_Immediate_Result (RT'Old, Expr)
+           and then RT = RT'Old
+        else
+           True),
+     Subprogram_Variant => (Decreases => Fuel, Decreases => 0);
+
+   procedure Eval_If_Special
+     (RT            : in out Lisp.Runtime.State;
+      Current_Frame : in Lisp.Types.Frame_Id;
+      Expr          : in Lisp.Types.Cell_Ref;
+      Fuel          : in Lisp.Types.Fuel_Count;
+      Result_Ref    : out Lisp.Types.Cell_Ref;
+      Error         : out Lisp.Types.Error_Code) is
+      Args_List : Lisp.Types.Cell_Ref := Lisp.Store.Cdr (RT.Store, Expr);
+      Operator  : Lisp.Types.Cell_Ref;
+      Form1     : Lisp.Types.Cell_Ref;
+      Form2     : Lisp.Types.Cell_Ref;
+      Form3     : Lisp.Types.Cell_Ref;
+      Tail      : Lisp.Types.Cell_Ref;
+      Old_RT    : constant Lisp.Runtime.State := RT;
+      Old_Env   : constant Lisp.Env.State := RT.Env;
+
+      procedure Assert_Frames_Preserved with Ghost is
+      begin
+         pragma Assert (Lisp.Env.Frames_Preserved (Old_Env, RT.Env));
+      end Assert_Frames_Preserved;
+
+      procedure Assert_Unchanged with Ghost is
+      begin
+         pragma Assert (RT = Old_RT);
+      end Assert_Unchanged;
+   begin
+      if Args_List = Lisp.Types.No_Ref then
+         Result_Ref := Lisp.Types.No_Ref;
+         Error := Lisp.Types.Error_Syntax;
+         pragma Assert
+           (Fuel <= 1
+            or else Old_RT.Known.If_Id = Old_RT.Known.Quote_Id
+            or else not Lisp.Runtime.If_Immediate_Result_Form (Old_RT, Expr));
+         Assert_Frames_Preserved;
+         return;
+      end if;
+      if Lisp.Store.Kind_Of (RT.Store, Args_List) /= Lisp.Types.Cons_Cell then
+         Result_Ref := Lisp.Types.No_Ref;
+         Error := Lisp.Types.Error_Arity;
+         pragma Assert
+           (Fuel <= 1
+            or else Old_RT.Known.If_Id = Old_RT.Known.Quote_Id
+            or else not Lisp.Runtime.If_Immediate_Result_Form (Old_RT, Expr));
+         Assert_Frames_Preserved;
+         return;
+      end if;
+
+      Form1 := Lisp.Store.Car (RT.Store, Args_List);
+      if Form1 = Lisp.Types.No_Ref then
+         Result_Ref := Lisp.Types.No_Ref;
+         Error := Lisp.Types.Error_Syntax;
+         pragma Assert
+           (Fuel <= 1
+            or else Old_RT.Known.If_Id = Old_RT.Known.Quote_Id
+            or else not Lisp.Runtime.If_Immediate_Result_Form (Old_RT, Expr));
+         Assert_Frames_Preserved;
+         return;
+      end if;
+
+      Tail := Lisp.Store.Cdr (RT.Store, Args_List);
+      if Tail = Lisp.Types.No_Ref then
+         Result_Ref := Lisp.Types.No_Ref;
+         Error := Lisp.Types.Error_Syntax;
+         pragma Assert
+           (Fuel <= 1
+            or else Old_RT.Known.If_Id = Old_RT.Known.Quote_Id
+            or else not Lisp.Runtime.If_Immediate_Result_Form (Old_RT, Expr));
+         Assert_Frames_Preserved;
+         return;
+      end if;
+      if Lisp.Store.Kind_Of (RT.Store, Tail) /= Lisp.Types.Cons_Cell then
+         Result_Ref := Lisp.Types.No_Ref;
+         Error := Lisp.Types.Error_Arity;
+         pragma Assert
+           (Fuel <= 1
+            or else Old_RT.Known.If_Id = Old_RT.Known.Quote_Id
+            or else not Lisp.Runtime.If_Immediate_Result_Form (Old_RT, Expr));
+         Assert_Frames_Preserved;
+         return;
+      end if;
+
+      Form2 := Lisp.Store.Car (RT.Store, Tail);
+      if Form2 = Lisp.Types.No_Ref then
+         Result_Ref := Lisp.Types.No_Ref;
+         Error := Lisp.Types.Error_Syntax;
+         pragma Assert
+           (Fuel <= 1
+            or else Old_RT.Known.If_Id = Old_RT.Known.Quote_Id
+            or else not Lisp.Runtime.If_Immediate_Result_Form (Old_RT, Expr));
+         Assert_Frames_Preserved;
+         return;
+      end if;
+
+      Tail := Lisp.Store.Cdr (RT.Store, Tail);
+      if Tail = Lisp.Types.No_Ref then
+         Result_Ref := Lisp.Types.No_Ref;
+         Error := Lisp.Types.Error_Syntax;
+         pragma Assert
+           (Fuel <= 1
+            or else Old_RT.Known.If_Id = Old_RT.Known.Quote_Id
+            or else not Lisp.Runtime.If_Immediate_Result_Form (Old_RT, Expr));
+         Assert_Frames_Preserved;
+         return;
+      end if;
+      if Lisp.Store.Kind_Of (RT.Store, Tail) /= Lisp.Types.Cons_Cell then
+         Result_Ref := Lisp.Types.No_Ref;
+         Error := Lisp.Types.Error_Arity;
+         pragma Assert
+           (Fuel <= 1
+            or else Old_RT.Known.If_Id = Old_RT.Known.Quote_Id
+            or else not Lisp.Runtime.If_Immediate_Result_Form (Old_RT, Expr));
+         Assert_Frames_Preserved;
+         return;
+      end if;
+
+      Form3 := Lisp.Store.Car (RT.Store, Tail);
+      if Form3 = Lisp.Types.No_Ref then
+         Result_Ref := Lisp.Types.No_Ref;
+         Error := Lisp.Types.Error_Syntax;
+         pragma Assert
+           (Fuel <= 1
+            or else Old_RT.Known.If_Id = Old_RT.Known.Quote_Id
+            or else not Lisp.Runtime.If_Immediate_Result_Form (Old_RT, Expr));
+         Assert_Frames_Preserved;
+         return;
+      end if;
+
+      Args_List := Lisp.Store.Cdr (RT.Store, Tail);
+      if Args_List = Lisp.Types.No_Ref then
+         Result_Ref := Lisp.Types.No_Ref;
+         Error := Lisp.Types.Error_Syntax;
+         pragma Assert
+           (Fuel <= 1
+            or else Old_RT.Known.If_Id = Old_RT.Known.Quote_Id
+            or else not Lisp.Runtime.If_Immediate_Result_Form (Old_RT, Expr));
+         Assert_Frames_Preserved;
+         return;
+      end if;
+      if Args_List /= Lisp.Store.Nil_Ref then
+         Result_Ref := Lisp.Types.No_Ref;
+         Error := Lisp.Types.Error_Arity;
+         pragma Assert
+           (Fuel <= 1
+            or else Old_RT.Known.If_Id = Old_RT.Known.Quote_Id
+            or else not Lisp.Runtime.If_Immediate_Result_Form (Old_RT, Expr));
+         Assert_Frames_Preserved;
+         return;
+      end if;
+
+      if Fuel > 1
+        and then Old_RT.Known.If_Id /= Old_RT.Known.Quote_Id
+        and then Lisp.Runtime.If_Immediate_Result_Form (Old_RT, Expr)
+      then
+         pragma Assert (Old_RT = RT);
+         pragma Assert (Lisp.Runtime.If_Form (Old_RT, Expr));
+         pragma Assert (Form1 = Lisp.Runtime.If_Form_Cond (Old_RT, Expr));
+         pragma Assert (Form2 = Lisp.Runtime.If_Form_Then (Old_RT, Expr));
+         pragma Assert (Form3 = Lisp.Runtime.If_Form_Else (Old_RT, Expr));
+         pragma Assert (Lisp.Runtime.Immediate_Result_Form (Old_RT, Form1));
+         pragma Assert (Lisp.Runtime.Immediate_Result_Form (Old_RT, Form2));
+         pragma Assert (Lisp.Runtime.Immediate_Result_Form (Old_RT, Form3));
+      end if;
+
+      Eval (RT, Current_Frame, Form1, Fuel - 1, Operator, Error);
+      if Fuel > 1
+        and then Old_RT.Known.If_Id /= Old_RT.Known.Quote_Id
+        and then Lisp.Runtime.If_Immediate_Result_Form (Old_RT, Expr)
+      then
+         Assert_Unchanged;
+         pragma Assert (Error = Lisp.Types.Error_None);
+         pragma Assert (Operator = Lisp.Runtime.Immediate_Result (Old_RT, Form1));
+      end if;
+      Assert_Frames_Preserved;
+      if Error /= Lisp.Types.Error_None then
+         Result_Ref := Lisp.Types.No_Ref;
+         pragma Assert
+           (Fuel <= 1
+            or else Old_RT.Known.If_Id = Old_RT.Known.Quote_Id
+            or else not Lisp.Runtime.If_Immediate_Result_Form (Old_RT, Expr));
+         Assert_Frames_Preserved;
+         return;
+      end if;
+
+      if Is_Truth (Operator) then
+         if Fuel > 1
+           and then Old_RT.Known.If_Id /= Old_RT.Known.Quote_Id
+           and then Lisp.Runtime.If_Immediate_Result_Form (Old_RT, Expr)
+         then
+            Assert_Unchanged;
+            Result_Ref := Lisp.Runtime.Immediate_Result (Old_RT, Form2);
+            Error := Lisp.Types.Error_None;
+            pragma Assert (Operator /= Lisp.Store.Nil_Ref);
+            pragma Assert (Result_Ref = Lisp.Runtime.Immediate_Result (Old_RT, Form2));
+            pragma Assert (Result_Ref = Lisp.Runtime.If_Immediate_Result (Old_RT, Expr));
+         else
+            Eval (RT, Current_Frame, Form2, Fuel - 1, Result_Ref, Error);
+         end if;
+         Assert_Frames_Preserved;
+      else
+         if Fuel > 1
+           and then Old_RT.Known.If_Id /= Old_RT.Known.Quote_Id
+           and then Lisp.Runtime.If_Immediate_Result_Form (Old_RT, Expr)
+         then
+            Assert_Unchanged;
+            Result_Ref := Lisp.Runtime.Immediate_Result (Old_RT, Form3);
+            Error := Lisp.Types.Error_None;
+            pragma Assert (Operator = Lisp.Store.Nil_Ref);
+            pragma Assert (Result_Ref = Lisp.Runtime.Immediate_Result (Old_RT, Form3));
+            pragma Assert (Result_Ref = Lisp.Runtime.If_Immediate_Result (Old_RT, Expr));
+         else
+            Eval (RT, Current_Frame, Form3, Fuel - 1, Result_Ref, Error);
+         end if;
+         Assert_Frames_Preserved;
+      end if;
+
+      pragma Assert
+        ((if Error = Lisp.Types.Error_None then
+             Lisp.Store.Is_Valid_Ref (RT.Store, Result_Ref)
+          else
+             Result_Ref = Lisp.Types.No_Ref));
+      pragma Assert
+        ((if Fuel > 1
+           and then Old_RT.Known.If_Id /= Old_RT.Known.Quote_Id
+           and then Lisp.Runtime.If_Immediate_Result_Form (Old_RT, Expr)
+          then
+             Error = Lisp.Types.Error_None
+             and then Result_Ref = Lisp.Runtime.If_Immediate_Result (Old_RT, Expr)
+             and then RT = Old_RT
+          else
+             True));
+      Assert_Frames_Preserved;
+   end Eval_If_Special;
+
    procedure Eval
      (RT            : in out Lisp.Runtime.State;
       Current_Frame : in Lisp.Types.Frame_Id;
@@ -300,11 +573,6 @@ package body Lisp.Eval with SPARK_Mode is
       begin
          pragma Assert (Lisp.Env.Frames_Preserved (Old_Env, RT.Env));
       end Assert_Frames_Preserved;
-
-      procedure Assert_Unchanged with Ghost is
-      begin
-         pragma Assert (RT = Old_RT);
-      end Assert_Unchanged;
    begin
       if Fuel = 0 then
          Result_Ref := Lisp.Types.No_Ref;
@@ -396,157 +664,8 @@ package body Lisp.Eval with SPARK_Mode is
                   Assert_Frames_Preserved;
                   return;
                elsif Name_Id = RT.Known.If_Id then
-                  if Lisp.Store.Kind_Of (RT.Store, Args_List) /= Lisp.Types.Cons_Cell then
-                     Result_Ref := Lisp.Types.No_Ref;
-                     Error := Lisp.Types.Error_Arity;
-                     pragma Assert
-                       (Fuel <= 1
-                        or else Old_RT.Known.If_Id = Old_RT.Known.Quote_Id
-                        or else not Lisp.Runtime.If_Immediate_Result_Form (Old_RT, Expr));
-                     Assert_Frames_Preserved;
-                     return;
-                  end if;
-                  Form1 := Lisp.Store.Car (RT.Store, Args_List);
-                  if Form1 = Lisp.Types.No_Ref then
-                     Result_Ref := Lisp.Types.No_Ref;
-                     Error := Lisp.Types.Error_Syntax;
-                     pragma Assert
-                       (Fuel <= 1
-                        or else Old_RT.Known.If_Id = Old_RT.Known.Quote_Id
-                        or else not Lisp.Runtime.If_Immediate_Result_Form (Old_RT, Expr));
-                     Assert_Frames_Preserved;
-                     return;
-                  end if;
-                  Tail := Lisp.Store.Cdr (RT.Store, Args_List);
-                  if Tail = Lisp.Types.No_Ref then
-                     Result_Ref := Lisp.Types.No_Ref;
-                     Error := Lisp.Types.Error_Syntax;
-                     pragma Assert
-                       (Fuel <= 1
-                        or else Old_RT.Known.If_Id = Old_RT.Known.Quote_Id
-                        or else not Lisp.Runtime.If_Immediate_Result_Form (Old_RT, Expr));
-                     Assert_Frames_Preserved;
-                     return;
-                  end if;
-                  if Lisp.Store.Kind_Of (RT.Store, Tail) /= Lisp.Types.Cons_Cell then
-                     Result_Ref := Lisp.Types.No_Ref;
-                     Error := Lisp.Types.Error_Arity;
-                     pragma Assert
-                       (Fuel <= 1
-                        or else Old_RT.Known.If_Id = Old_RT.Known.Quote_Id
-                        or else not Lisp.Runtime.If_Immediate_Result_Form (Old_RT, Expr));
-                     Assert_Frames_Preserved;
-                     return;
-                  end if;
-                  Form2 := Lisp.Store.Car (RT.Store, Tail);
-                  if Form2 = Lisp.Types.No_Ref then
-                     Result_Ref := Lisp.Types.No_Ref;
-                     Error := Lisp.Types.Error_Syntax;
-                     pragma Assert
-                       (Fuel <= 1
-                        or else Old_RT.Known.If_Id = Old_RT.Known.Quote_Id
-                        or else not Lisp.Runtime.If_Immediate_Result_Form (Old_RT, Expr));
-                     Assert_Frames_Preserved;
-                     return;
-                  end if;
-                  Tail := Lisp.Store.Cdr (RT.Store, Tail);
-                  if Tail = Lisp.Types.No_Ref then
-                     Result_Ref := Lisp.Types.No_Ref;
-                     Error := Lisp.Types.Error_Syntax;
-                     pragma Assert
-                       (Fuel <= 1
-                        or else Old_RT.Known.If_Id = Old_RT.Known.Quote_Id
-                        or else not Lisp.Runtime.If_Immediate_Result_Form (Old_RT, Expr));
-                     Assert_Frames_Preserved;
-                     return;
-                  end if;
-                  if Lisp.Store.Kind_Of (RT.Store, Tail) /= Lisp.Types.Cons_Cell then
-                     Result_Ref := Lisp.Types.No_Ref;
-                     Error := Lisp.Types.Error_Arity;
-                     pragma Assert
-                       (Fuel <= 1
-                        or else Old_RT.Known.If_Id = Old_RT.Known.Quote_Id
-                        or else not Lisp.Runtime.If_Immediate_Result_Form (Old_RT, Expr));
-                     Assert_Frames_Preserved;
-                     return;
-                  end if;
-                  Form3 := Lisp.Store.Car (RT.Store, Tail);
-                  if Form3 = Lisp.Types.No_Ref then
-                     Result_Ref := Lisp.Types.No_Ref;
-                     Error := Lisp.Types.Error_Syntax;
-                     pragma Assert
-                       (Fuel <= 1
-                        or else Old_RT.Known.If_Id = Old_RT.Known.Quote_Id
-                        or else not Lisp.Runtime.If_Immediate_Result_Form (Old_RT, Expr));
-                     Assert_Frames_Preserved;
-                     return;
-                  end if;
-                  Args_List := Lisp.Store.Cdr (RT.Store, Tail);
-                  if Args_List = Lisp.Types.No_Ref then
-                     Result_Ref := Lisp.Types.No_Ref;
-                     Error := Lisp.Types.Error_Syntax;
-                     pragma Assert
-                       (Fuel <= 1
-                        or else Old_RT.Known.If_Id = Old_RT.Known.Quote_Id
-                        or else not Lisp.Runtime.If_Immediate_Result_Form (Old_RT, Expr));
-                     Assert_Frames_Preserved;
-                     return;
-                  end if;
-                  if Args_List /= Lisp.Store.Nil_Ref then
-                     Result_Ref := Lisp.Types.No_Ref;
-                     Error := Lisp.Types.Error_Arity;
-                     pragma Assert
-                       (Fuel <= 1
-                        or else Old_RT.Known.If_Id = Old_RT.Known.Quote_Id
-                        or else not Lisp.Runtime.If_Immediate_Result_Form (Old_RT, Expr));
-                     Assert_Frames_Preserved;
-                     return;
-                  end if;
-                  if Fuel > 1
-                    and then Old_RT.Known.If_Id /= Old_RT.Known.Quote_Id
-                    and then Lisp.Runtime.If_Immediate_Result_Form (Old_RT, Expr)
-                  then
-                     pragma Assert (Old_RT = RT);
-                     pragma Assert (Lisp.Runtime.If_Form (Old_RT, Expr));
-                     pragma Assert (Form1 = Lisp.Runtime.If_Form_Cond (Old_RT, Expr));
-                     pragma Assert (Form2 = Lisp.Runtime.If_Form_Then (Old_RT, Expr));
-                     pragma Assert (Form3 = Lisp.Runtime.If_Form_Else (Old_RT, Expr));
-                     pragma Assert (Lisp.Runtime.Immediate_Result_Form (Old_RT, Form1));
-                     pragma Assert (Lisp.Runtime.Immediate_Result_Form (Old_RT, Form2));
-                     pragma Assert (Lisp.Runtime.Immediate_Result_Form (Old_RT, Form3));
-                  end if;
-                  Eval (RT, Current_Frame, Form1, Fuel - 1, Operator, Error);
-                  if Fuel > 1
-                    and then Old_RT.Known.If_Id /= Old_RT.Known.Quote_Id
-                    and then Lisp.Runtime.If_Immediate_Result_Form (Old_RT, Expr)
-                  then
-                     Assert_Unchanged;
-                     pragma Assert (Error = Lisp.Types.Error_None);
-                     pragma Assert
-                       (Operator = Lisp.Runtime.Immediate_Result (Old_RT, Form1));
-                  end if;
-                  Assert_Frames_Preserved;
-                  if Error /= Lisp.Types.Error_None then
-                     Result_Ref := Lisp.Types.No_Ref;
-                     pragma Assert
-                       (Fuel <= 1
-                        or else Old_RT.Known.If_Id = Old_RT.Known.Quote_Id
-                        or else not Lisp.Runtime.If_Immediate_Result_Form (Old_RT, Expr));
-                     Assert_Frames_Preserved;
-                     return;
-                  end if;
-                  if Is_Truth (Operator) then
-                     Eval (RT, Current_Frame, Form2, Fuel - 1, Result_Ref, Error);
-                     Assert_Frames_Preserved;
-                  else
-                     Eval (RT, Current_Frame, Form3, Fuel - 1, Result_Ref, Error);
-                     Assert_Frames_Preserved;
-                  end if;
-                  pragma Assert
-                    ((if Error = Lisp.Types.Error_None then
-                         Lisp.Store.Is_Valid_Ref (RT.Store, Result_Ref)
-                      else
-                         Result_Ref = Lisp.Types.No_Ref));
+                  Eval_If_Special
+                    (RT, Current_Frame, Expr, Fuel, Result_Ref, Error);
                   Assert_Frames_Preserved;
                   return;
                elsif Name_Id = RT.Known.Begin_Id then
@@ -796,4 +915,32 @@ package body Lisp.Eval with SPARK_Mode is
              Result_Ref = Lisp.Types.No_Ref));
       Assert_Frames_Preserved;
    end Eval;
+
+   procedure Prove_If_Immediate_Eval
+     (RT            : in Lisp.Runtime.State;
+      Current_Frame : in Lisp.Types.Frame_Id;
+      Expr          : in Lisp.Types.Cell_Ref;
+      Fuel          : in Lisp.Types.Fuel_Count;
+      Result_Ref    : out Lisp.Types.Cell_Ref;
+      Error         : out Lisp.Types.Error_Code) is
+      Exec_RT : Lisp.Runtime.State := RT;
+      Form1   : constant Lisp.Types.Cell_Ref := Lisp.Runtime.If_Form_Cond (RT, Expr);
+      Form2   : constant Lisp.Types.Cell_Ref := Lisp.Runtime.If_Form_Then (RT, Expr);
+      Form3   : constant Lisp.Types.Cell_Ref := Lisp.Runtime.If_Form_Else (RT, Expr);
+   begin
+      pragma Assert (Lisp.Runtime.Immediate_Result_Form (RT, Form1));
+      pragma Assert (Lisp.Runtime.Immediate_Result_Form (RT, Form2));
+      pragma Assert (Lisp.Runtime.Immediate_Result_Form (RT, Form3));
+
+      Eval_If_Special (Exec_RT, Current_Frame, Expr, Fuel, Result_Ref, Error);
+
+      pragma Assert (Exec_RT = RT);
+      pragma Assert (Error = Lisp.Types.Error_None);
+      if Lisp.Runtime.Immediate_Result (RT, Form1) /= Lisp.Store.Nil_Ref then
+         pragma Assert (Result_Ref = Lisp.Runtime.Immediate_Result (RT, Form2));
+      else
+         pragma Assert (Result_Ref = Lisp.Runtime.Immediate_Result (RT, Form3));
+      end if;
+      pragma Assert (Result_Ref = Lisp.Runtime.If_Immediate_Result (RT, Expr));
+   end Prove_If_Immediate_Eval;
 end Lisp.Eval;

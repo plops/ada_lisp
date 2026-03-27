@@ -55,5 +55,23 @@ package Lisp.Eval with SPARK_Mode is
         else
            True)
        ,
-     Subprogram_Variant => (Decreases => Fuel);
+     Subprogram_Variant => (Decreases => Fuel, Decreases => 1);
+
+   procedure Prove_If_Immediate_Eval
+     (RT            : in Lisp.Runtime.State;
+      Current_Frame : in Lisp.Types.Frame_Id;
+      Expr          : in Lisp.Types.Cell_Ref;
+      Fuel          : in Lisp.Types.Fuel_Count;
+      Result_Ref    : out Lisp.Types.Cell_Ref;
+      Error         : out Lisp.Types.Error_Code)
+   with
+     Ghost,
+     Pre => Lisp.Runtime.Valid (RT)
+       and then Lisp.Env.Frame_Valid (RT.Env, Current_Frame)
+       and then Lisp.Store.Is_Valid_Ref (RT.Store, Expr)
+       and then Fuel > 1
+       and then RT.Known.If_Id /= RT.Known.Quote_Id
+       and then Lisp.Runtime.If_Immediate_Result_Form (RT, Expr),
+     Post => Lisp.Types."=" (Error, Lisp.Types.Error_None)
+       and then Result_Ref = Lisp.Runtime.If_Immediate_Result (RT, Expr);
 end Lisp.Eval;
