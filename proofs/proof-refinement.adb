@@ -155,9 +155,9 @@ procedure Proof.Refinement with SPARK_Mode is
          return;
       end if;
 
-      if Initial_RT.Known.If_Id /= Initial_RT.Known.Quote_Id
-        and then Lisp.Runtime.If_Immediate_Result_Form (Initial_RT, Initial_Expr)
-      then
+      pragma Assert (Initial_RT.Known.If_Id /= Initial_RT.Known.Quote_Id);
+
+      if Lisp.Runtime.If_Immediate_Result_Form (Initial_RT, Initial_Expr) then
          Prove_If_Immediate_Form_Refines (Initial_RT, Initial_Expr);
          return;
       end if;

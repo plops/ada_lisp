@@ -13,7 +13,14 @@ package body Lisp.Runtime with SPARK_Mode is
        and then Name'First = 1
        and then First in Name'Range
        and then Last in First .. Name'Last,
-     Post => Valid (RT);
+     Post => Valid (RT)
+       and then Lisp.Symbols.Entries_Preserved (RT'Old.Symbols, RT.Symbols)
+       and then
+       (if Lisp.Types."=" (Error, Lisp.Types.Error_None) then
+           Lisp.Symbols.Interned (RT.Symbols, Name_Id)
+           and then Lisp.Symbols.Equal_Slice (RT.Symbols, Name_Id, Name, First, Last)
+        else
+           Name_Id = 0);
 
    procedure Bind_Primitive
      (RT      : in out State;
@@ -45,7 +52,12 @@ package body Lisp.Runtime with SPARK_Mode is
    end Intern_Known;
 
    procedure Initialize (RT : in out State; Error : out Lisp.Types.Error_Code) is
-      Name_Id : Lisp.Types.Symbol_Id;
+      Quote_Name  : constant String := "quote";
+      If_Name     : constant String := "if";
+      Name_Id     : Lisp.Types.Symbol_Id;
+      Quote_Id    : Lisp.Types.Symbol_Id;
+      If_Id       : Lisp.Types.Symbol_Id;
+      Quote_Table : Lisp.Symbols.Table;
    begin
       Lisp.Symbols.Initialize (RT.Symbols);
       Lisp.Store.Initialize (RT.Store);
@@ -126,6 +138,45 @@ package body Lisp.Runtime with SPARK_Mode is
       if Error /= Lisp.Types.Error_None then return; end if;
       Bind_Primitive (RT, RT.Known.Le_Id, Lisp.Types.Prim_Le, Error);
       if Error /= Lisp.Types.Error_None then return; end if;
+
+      declare
+         Symbols : Lisp.Symbols.Table renames RT.Symbols;
+      begin
+         Lisp.Symbols.Intern
+           (Symbols, Quote_Name, Quote_Name'First, Quote_Name'Last, Quote_Id, Error);
+         if Error /= Lisp.Types.Error_None then return; end if;
+         pragma Assert
+           (Lisp.Symbols.Equal_Slice
+              (Symbols, Quote_Id, Quote_Name, Quote_Name'First, Quote_Name'Last));
+         Quote_Table := Symbols;
+         pragma Assert
+           (Lisp.Symbols.Equal_Slice
+              (Quote_Table, Quote_Id, Quote_Name, Quote_Name'First, Quote_Name'Last));
+         Lisp.Symbols.Intern
+           (Symbols, If_Name, If_Name'First, If_Name'Last, If_Id, Error);
+         if Error /= Lisp.Types.Error_None then return; end if;
+         pragma Assert
+           (Lisp.Symbols.Equal_Slice
+              (Symbols, If_Id, If_Name, If_Name'First, If_Name'Last));
+         pragma Assert
+           (Lisp.Symbols.Entries_Preserved (Quote_Table, Symbols));
+         Lisp.Symbols.Prove_Equal_Slice_Preserved
+           (Quote_Table,
+            Symbols,
+            Quote_Id,
+            Quote_Name,
+            Quote_Name'First,
+            Quote_Name'Last);
+         pragma Assert
+           (Lisp.Symbols.Equal_Slice
+              (Symbols, Quote_Id, Quote_Name, Quote_Name'First, Quote_Name'Last));
+         Lisp.Symbols.Prove_Different_Length_Ids_Distinct
+           (Symbols, Quote_Id, Quote_Name'Length, If_Id, If_Name'Length);
+         pragma Assert (Quote_Id /= If_Id);
+      end;
+      RT.Known.Quote_Id := Quote_Id;
+      RT.Known.If_Id := If_Id;
+      pragma Assert (RT.Known.Quote_Id /= RT.Known.If_Id);
 
       pragma Assert (Lisp.Symbols.Valid (RT.Symbols));
       pragma Assert (Lisp.Store.Valid (RT.Store));

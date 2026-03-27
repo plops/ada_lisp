@@ -34,7 +34,12 @@ package Lisp.Runtime with SPARK_Mode is
 
    procedure Initialize (RT : in out State; Error : out Lisp.Types.Error_Code)
    with
-     Post => Valid (RT);
+     Post => Valid (RT)
+       and then
+       (if Lisp.Types."=" (Error, Lisp.Types.Error_None) then
+           RT.Known.Quote_Id /= RT.Known.If_Id
+        else
+           True);
 
    function Valid (RT : State) return Boolean is
      (Lisp.Symbols.Valid (RT.Symbols)

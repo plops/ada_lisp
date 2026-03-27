@@ -19,6 +19,7 @@ package Lisp.Parser with SPARK_Mode is
        and then Source'Last < Natural'Last,
      Post => Next_Pos in Pos .. Source'Last + 1
        and then Lisp.Runtime.Valid (RT)
+       and then Lisp.Runtime."=" (RT.Known, RT.Known'Old)
        and then
        (if Lisp.Types."=" (Error, Lisp.Types.Error_None) then
            Lisp.Store.Is_Valid_Ref (RT.Store, Ref)

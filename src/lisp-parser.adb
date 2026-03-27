@@ -35,6 +35,7 @@ package body Lisp.Parser with SPARK_Mode is
        and then Lisp.Symbols.Valid (RT.Symbols)
        and then Lisp.Store.Valid (RT.Store)
        and then Lisp.Env.Valid (RT.Env)
+       and then Lisp.Runtime."=" (RT.Known, RT.Known'Old)
        and then Store_Refs_Preserved (RT.Store'Old, RT.Store)
        and then
        (if Lisp.Types."=" (Error, Lisp.Types.Error_None) then
@@ -103,6 +104,7 @@ package body Lisp.Parser with SPARK_Mode is
        and then Lisp.Symbols.Valid (RT.Symbols)
        and then Lisp.Store.Valid (RT.Store)
        and then Lisp.Env.Valid (RT.Env)
+       and then Lisp.Runtime."=" (RT.Known, RT.Known'Old)
        and then Store_Refs_Preserved (RT.Store'Old, RT.Store)
        and then
        (if Lisp.Types."=" (Error, Lisp.Types.Error_None) then
@@ -124,6 +126,7 @@ package body Lisp.Parser with SPARK_Mode is
        and then Valid_Result (RT, Tail),
      Post => Lisp.Store.Valid (RT.Store)
        and then Lisp.Env.Valid (RT.Env)
+       and then Lisp.Runtime."=" (RT.Known, RT.Known'Old)
        and then Store_Refs_Preserved (RT.Store'Old, RT.Store)
        and then
        (if Lisp.Types."=" (Error, Lisp.Types.Error_None) then
@@ -139,6 +142,7 @@ package body Lisp.Parser with SPARK_Mode is
       while Index > 0 loop
          pragma Loop_Invariant (Lisp.Store.Valid (RT.Store));
          pragma Loop_Invariant (Lisp.Env.Valid (RT.Env));
+         pragma Loop_Invariant (Lisp.Runtime."=" (RT.Known, RT.Known'Loop_Entry));
          pragma Loop_Invariant (Store_Refs_Preserved (Old_Store, RT.Store));
          pragma Loop_Invariant (Index <= Elem_Count);
          pragma Loop_Invariant (Element_Prefix_Valid (RT, Elements, Elem_Count));
@@ -223,6 +227,7 @@ package body Lisp.Parser with SPARK_Mode is
      Post => Lisp.Symbols.Valid (RT.Symbols)
        and then Lisp.Store.Valid (RT.Store)
        and then Lisp.Env.Valid (RT.Env)
+       and then Lisp.Runtime."=" (RT.Known, RT.Known'Old)
        and then Store_Refs_Preserved (RT.Store'Old, RT.Store)
        and then
        (if Lisp.Types."=" (Error, Lisp.Types.Error_None) then
@@ -278,6 +283,7 @@ package body Lisp.Parser with SPARK_Mode is
      Post => Lisp.Symbols.Valid (RT.Symbols)
        and then Lisp.Store.Valid (RT.Store)
        and then Lisp.Env.Valid (RT.Env)
+       and then Lisp.Runtime."=" (RT.Known, RT.Known'Old)
        and then Store_Refs_Preserved (RT.Store'Old, RT.Store)
        and then Element_Prefix_Valid (RT, Elements, Count)
        and then Cursor in Tok.First .. Source'Last + 1 is
@@ -324,6 +330,7 @@ package body Lisp.Parser with SPARK_Mode is
        and then Lisp.Symbols.Valid (RT.Symbols)
        and then Lisp.Store.Valid (RT.Store)
        and then Lisp.Env.Valid (RT.Env)
+       and then Lisp.Runtime."=" (RT.Known, RT.Known'Old)
        and then Store_Refs_Preserved (RT.Store'Old, RT.Store)
        and then
        (if Lisp.Types."=" (Error, Lisp.Types.Error_None) then
@@ -385,6 +392,7 @@ package body Lisp.Parser with SPARK_Mode is
        and then Lisp.Symbols.Valid (RT.Symbols)
        and then Lisp.Store.Valid (RT.Store)
        and then Lisp.Env.Valid (RT.Env)
+       and then Lisp.Runtime."=" (RT.Known, RT.Known'Old)
        and then Store_Refs_Preserved (RT.Store'Old, RT.Store)
        and then
        (if Lisp.Types."=" (Error, Lisp.Types.Error_None) then
@@ -463,6 +471,7 @@ package body Lisp.Parser with SPARK_Mode is
        and then Lisp.Symbols.Valid (RT.Symbols)
        and then Lisp.Store.Valid (RT.Store)
        and then Lisp.Env.Valid (RT.Env)
+       and then Lisp.Runtime."=" (RT.Known, RT.Known'Old)
        and then Store_Refs_Preserved (RT.Store'Old, RT.Store)
        and then
        (if Lisp.Types."=" (Error, Lisp.Types.Error_None) then
@@ -482,6 +491,7 @@ package body Lisp.Parser with SPARK_Mode is
          pragma Loop_Invariant (Lisp.Symbols.Valid (RT.Symbols));
          pragma Loop_Invariant (Lisp.Store.Valid (RT.Store));
          pragma Loop_Invariant (Lisp.Env.Valid (RT.Env));
+         pragma Loop_Invariant (Lisp.Runtime."=" (RT.Known, RT.Known'Loop_Entry));
          pragma Loop_Invariant (Store_Refs_Preserved (Old_Store, RT.Store));
          pragma Loop_Invariant (Element_Prefix_Valid (RT, Elements, Count));
          pragma Loop_Invariant (Cursor in Pos .. Source'Last + 1);
