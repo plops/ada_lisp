@@ -6,6 +6,7 @@ with Lisp.Store;
 package body Lisp.Eval with SPARK_Mode is
    use type Lisp.Types.Error_Code;
    use type Lisp.Types.Cell_Kind;
+   use type Lisp.Runtime.State;
 
    function Is_Truth (Ref : Lisp.Types.Cell_Ref) return Boolean is
      (Ref /= Lisp.Store.Nil_Ref);
@@ -292,12 +293,18 @@ package body Lisp.Eval with SPARK_Mode is
       Form2        : Lisp.Types.Cell_Ref;
       Form3        : Lisp.Types.Cell_Ref;
       Tail         : Lisp.Types.Cell_Ref;
+      Old_RT       : constant Lisp.Runtime.State := RT;
       Old_Env      : constant Lisp.Env.State := RT.Env;
 
       procedure Assert_Frames_Preserved with Ghost is
       begin
          pragma Assert (Lisp.Env.Frames_Preserved (Old_Env, RT.Env));
       end Assert_Frames_Preserved;
+
+      procedure Assert_Unchanged with Ghost is
+      begin
+         pragma Assert (RT = Old_RT);
+      end Assert_Unchanged;
    begin
       if Fuel = 0 then
          Result_Ref := Lisp.Types.No_Ref;
@@ -311,6 +318,14 @@ package body Lisp.Eval with SPARK_Mode is
            | Lisp.Types.Primitive_Cell | Lisp.Types.Closure_Cell =>
             Result_Ref := Expr;
             Error := Lisp.Types.Error_None;
+            pragma Assert (Lisp.Store.Is_Valid_Ref (RT.Store, Result_Ref));
+            pragma Assert
+              ((if Lisp.Runtime.Immediate_Result_Form (Old_RT, Expr) then
+                   Result_Ref = Lisp.Runtime.Immediate_Result (Old_RT, Expr)
+                   and then RT = Old_RT
+                else
+                   True));
+            pragma Assert (not Lisp.Runtime.If_Immediate_Result_Form (Old_RT, Expr));
          when Lisp.Types.Symbol_Cell =>
             Name_Id := Lisp.Store.Symbol_Value (RT.Store, Expr);
             Lisp.Env.Lookup (RT.Env, Current_Frame, Name_Id, Result_Ref, Found);
@@ -320,6 +335,7 @@ package body Lisp.Eval with SPARK_Mode is
                Result_Ref := Lisp.Types.No_Ref;
                Error := Lisp.Types.Error_Unbound_Symbol;
             end if;
+            pragma Assert (not Lisp.Runtime.If_Immediate_Result_Form (Old_RT, Expr));
          when Lisp.Types.Cons_Cell =>
             Head := Lisp.Store.Car (RT.Store, Expr);
             Args_List := Lisp.Store.Cdr (RT.Store, Expr);
@@ -365,14 +381,28 @@ package body Lisp.Eval with SPARK_Mode is
                   pragma Assert
                     ((if Error = Lisp.Types.Error_None then
                          Lisp.Store.Is_Valid_Ref (RT.Store, Result_Ref)
-                      else
+                     else
                          Result_Ref = Lisp.Types.No_Ref));
+                  pragma Assert
+                    ((if Lisp.Runtime.Immediate_Result_Form (Old_RT, Expr) then
+                         Error = Lisp.Types.Error_None
+                         and then Result_Ref = Lisp.Runtime.Immediate_Result (Old_RT, Expr)
+                         and then RT = Old_RT
+                      else
+                         True));
+                  pragma Assert
+                    (Old_RT.Known.If_Id = Old_RT.Known.Quote_Id
+                     or else not Lisp.Runtime.If_Immediate_Result_Form (Old_RT, Expr));
                   Assert_Frames_Preserved;
                   return;
                elsif Name_Id = RT.Known.If_Id then
                   if Lisp.Store.Kind_Of (RT.Store, Args_List) /= Lisp.Types.Cons_Cell then
                      Result_Ref := Lisp.Types.No_Ref;
                      Error := Lisp.Types.Error_Arity;
+                     pragma Assert
+                       (Fuel <= 1
+                        or else Old_RT.Known.If_Id = Old_RT.Known.Quote_Id
+                        or else not Lisp.Runtime.If_Immediate_Result_Form (Old_RT, Expr));
                      Assert_Frames_Preserved;
                      return;
                   end if;
@@ -380,6 +410,10 @@ package body Lisp.Eval with SPARK_Mode is
                   if Form1 = Lisp.Types.No_Ref then
                      Result_Ref := Lisp.Types.No_Ref;
                      Error := Lisp.Types.Error_Syntax;
+                     pragma Assert
+                       (Fuel <= 1
+                        or else Old_RT.Known.If_Id = Old_RT.Known.Quote_Id
+                        or else not Lisp.Runtime.If_Immediate_Result_Form (Old_RT, Expr));
                      Assert_Frames_Preserved;
                      return;
                   end if;
@@ -387,12 +421,20 @@ package body Lisp.Eval with SPARK_Mode is
                   if Tail = Lisp.Types.No_Ref then
                      Result_Ref := Lisp.Types.No_Ref;
                      Error := Lisp.Types.Error_Syntax;
+                     pragma Assert
+                       (Fuel <= 1
+                        or else Old_RT.Known.If_Id = Old_RT.Known.Quote_Id
+                        or else not Lisp.Runtime.If_Immediate_Result_Form (Old_RT, Expr));
                      Assert_Frames_Preserved;
                      return;
                   end if;
                   if Lisp.Store.Kind_Of (RT.Store, Tail) /= Lisp.Types.Cons_Cell then
                      Result_Ref := Lisp.Types.No_Ref;
                      Error := Lisp.Types.Error_Arity;
+                     pragma Assert
+                       (Fuel <= 1
+                        or else Old_RT.Known.If_Id = Old_RT.Known.Quote_Id
+                        or else not Lisp.Runtime.If_Immediate_Result_Form (Old_RT, Expr));
                      Assert_Frames_Preserved;
                      return;
                   end if;
@@ -400,6 +442,10 @@ package body Lisp.Eval with SPARK_Mode is
                   if Form2 = Lisp.Types.No_Ref then
                      Result_Ref := Lisp.Types.No_Ref;
                      Error := Lisp.Types.Error_Syntax;
+                     pragma Assert
+                       (Fuel <= 1
+                        or else Old_RT.Known.If_Id = Old_RT.Known.Quote_Id
+                        or else not Lisp.Runtime.If_Immediate_Result_Form (Old_RT, Expr));
                      Assert_Frames_Preserved;
                      return;
                   end if;
@@ -407,12 +453,20 @@ package body Lisp.Eval with SPARK_Mode is
                   if Tail = Lisp.Types.No_Ref then
                      Result_Ref := Lisp.Types.No_Ref;
                      Error := Lisp.Types.Error_Syntax;
+                     pragma Assert
+                       (Fuel <= 1
+                        or else Old_RT.Known.If_Id = Old_RT.Known.Quote_Id
+                        or else not Lisp.Runtime.If_Immediate_Result_Form (Old_RT, Expr));
                      Assert_Frames_Preserved;
                      return;
                   end if;
                   if Lisp.Store.Kind_Of (RT.Store, Tail) /= Lisp.Types.Cons_Cell then
                      Result_Ref := Lisp.Types.No_Ref;
                      Error := Lisp.Types.Error_Arity;
+                     pragma Assert
+                       (Fuel <= 1
+                        or else Old_RT.Known.If_Id = Old_RT.Known.Quote_Id
+                        or else not Lisp.Runtime.If_Immediate_Result_Form (Old_RT, Expr));
                      Assert_Frames_Preserved;
                      return;
                   end if;
@@ -420,6 +474,10 @@ package body Lisp.Eval with SPARK_Mode is
                   if Form3 = Lisp.Types.No_Ref then
                      Result_Ref := Lisp.Types.No_Ref;
                      Error := Lisp.Types.Error_Syntax;
+                     pragma Assert
+                       (Fuel <= 1
+                        or else Old_RT.Known.If_Id = Old_RT.Known.Quote_Id
+                        or else not Lisp.Runtime.If_Immediate_Result_Form (Old_RT, Expr));
                      Assert_Frames_Preserved;
                      return;
                   end if;
@@ -427,19 +485,53 @@ package body Lisp.Eval with SPARK_Mode is
                   if Args_List = Lisp.Types.No_Ref then
                      Result_Ref := Lisp.Types.No_Ref;
                      Error := Lisp.Types.Error_Syntax;
+                     pragma Assert
+                       (Fuel <= 1
+                        or else Old_RT.Known.If_Id = Old_RT.Known.Quote_Id
+                        or else not Lisp.Runtime.If_Immediate_Result_Form (Old_RT, Expr));
                      Assert_Frames_Preserved;
                      return;
                   end if;
                   if Args_List /= Lisp.Store.Nil_Ref then
                      Result_Ref := Lisp.Types.No_Ref;
                      Error := Lisp.Types.Error_Arity;
+                     pragma Assert
+                       (Fuel <= 1
+                        or else Old_RT.Known.If_Id = Old_RT.Known.Quote_Id
+                        or else not Lisp.Runtime.If_Immediate_Result_Form (Old_RT, Expr));
                      Assert_Frames_Preserved;
                      return;
                   end if;
+                  if Fuel > 1
+                    and then Old_RT.Known.If_Id /= Old_RT.Known.Quote_Id
+                    and then Lisp.Runtime.If_Immediate_Result_Form (Old_RT, Expr)
+                  then
+                     pragma Assert (Old_RT = RT);
+                     pragma Assert (Lisp.Runtime.If_Form (Old_RT, Expr));
+                     pragma Assert (Form1 = Lisp.Runtime.If_Form_Cond (Old_RT, Expr));
+                     pragma Assert (Form2 = Lisp.Runtime.If_Form_Then (Old_RT, Expr));
+                     pragma Assert (Form3 = Lisp.Runtime.If_Form_Else (Old_RT, Expr));
+                     pragma Assert (Lisp.Runtime.Immediate_Result_Form (Old_RT, Form1));
+                     pragma Assert (Lisp.Runtime.Immediate_Result_Form (Old_RT, Form2));
+                     pragma Assert (Lisp.Runtime.Immediate_Result_Form (Old_RT, Form3));
+                  end if;
                   Eval (RT, Current_Frame, Form1, Fuel - 1, Operator, Error);
+                  if Fuel > 1
+                    and then Old_RT.Known.If_Id /= Old_RT.Known.Quote_Id
+                    and then Lisp.Runtime.If_Immediate_Result_Form (Old_RT, Expr)
+                  then
+                     Assert_Unchanged;
+                     pragma Assert (Error = Lisp.Types.Error_None);
+                     pragma Assert
+                       (Operator = Lisp.Runtime.Immediate_Result (Old_RT, Form1));
+                  end if;
                   Assert_Frames_Preserved;
                   if Error /= Lisp.Types.Error_None then
                      Result_Ref := Lisp.Types.No_Ref;
+                     pragma Assert
+                       (Fuel <= 1
+                        or else Old_RT.Known.If_Id = Old_RT.Known.Quote_Id
+                        or else not Lisp.Runtime.If_Immediate_Result_Form (Old_RT, Expr));
                      Assert_Frames_Preserved;
                      return;
                   end if;
@@ -458,7 +550,13 @@ package body Lisp.Eval with SPARK_Mode is
                   Assert_Frames_Preserved;
                   return;
                elsif Name_Id = RT.Known.Begin_Id then
+                  pragma Assert (not Lisp.Runtime.If_Immediate_Result_Form (Old_RT, Expr));
                   Eval_Begin (RT, Current_Frame, Args_List, Fuel - 1, Result_Ref, Error);
+                  pragma Assert
+                    ((if Error = Lisp.Types.Error_None then
+                         Lisp.Store.Is_Valid_Ref (RT.Store, Result_Ref)
+                      else
+                         Result_Ref = Lisp.Types.No_Ref));
                   Assert_Frames_Preserved;
                   return;
                elsif Name_Id = RT.Known.Lambda_Id then
@@ -518,9 +616,15 @@ package body Lisp.Eval with SPARK_Mode is
                   pragma Assert
                     (Name_Array (Name_Array'First) = Name_Array (Name_Array'First));
                   Lisp.Store.Make_Closure (RT.Store, Params, Body_Expr, Current_Frame, Result_Ref, Error);
+                  pragma Assert
+                    ((if Error = Lisp.Types.Error_None then
+                         Lisp.Store.Is_Valid_Ref (RT.Store, Result_Ref)
+                      else
+                         Result_Ref = Lisp.Types.No_Ref));
                   Assert_Frames_Preserved;
                   return;
                elsif Name_Id = RT.Known.Define_Id then
+                  pragma Assert (not Lisp.Runtime.If_Immediate_Result_Form (Old_RT, Expr));
                   if Current_Frame /= Lisp.Env.Global_Frame then
                      Result_Ref := Lisp.Types.No_Ref;
                      Error := Lisp.Types.Error_Invalid_Define;
@@ -600,11 +704,17 @@ package body Lisp.Eval with SPARK_Mode is
                   else
                      Result_Ref := Lisp.Types.No_Ref;
                   end if;
+                  pragma Assert
+                    ((if Error = Lisp.Types.Error_None then
+                         Lisp.Store.Is_Valid_Ref (RT.Store, Result_Ref)
+                      else
+                         Result_Ref = Lisp.Types.No_Ref));
                   Assert_Frames_Preserved;
                   return;
                end if;
             end if;
 
+            pragma Assert (not Lisp.Runtime.If_Immediate_Result_Form (Old_RT, Expr));
             Eval (RT, Current_Frame, Head, Fuel - 1, Operator, Error);
             Assert_Frames_Preserved;
             if Error /= Lisp.Types.Error_None then
@@ -679,6 +789,11 @@ package body Lisp.Eval with SPARK_Mode is
             end case;
             Assert_Frames_Preserved;
       end case;
+      pragma Assert
+        ((if Error = Lisp.Types.Error_None then
+             Lisp.Store.Is_Valid_Ref (RT.Store, Result_Ref)
+          else
+             Result_Ref = Lisp.Types.No_Ref));
       Assert_Frames_Preserved;
    end Eval;
 end Lisp.Eval;

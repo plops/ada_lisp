@@ -5,6 +5,7 @@ with Lisp.Types;
 
 package Lisp.Eval with SPARK_Mode is
    use type Lisp.Types.Cell_Kind;
+   use type Lisp.Runtime.State;
 
    procedure Eval
      (RT            : in out Lisp.Runtime.State;
@@ -42,6 +43,15 @@ package Lisp.Eval with SPARK_Mode is
         then
            Lisp.Types."=" (Error, Lisp.Types.Error_None)
            and then Result_Ref = Lisp.Runtime.Quote_Form_Result (RT'Old, Expr)
+        else
+           True)
+       and then
+       (if Fuel > 0
+         and then Lisp.Runtime.Immediate_Result_Form (RT'Old, Expr)
+        then
+           Lisp.Types."=" (Error, Lisp.Types.Error_None)
+           and then Result_Ref = Lisp.Runtime.Immediate_Result (RT'Old, Expr)
+           and then RT = RT'Old
         else
            True)
        ,
