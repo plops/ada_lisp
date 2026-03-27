@@ -198,6 +198,15 @@ is
         then
            Lisp.Types."=" (Error, Lisp.Types.Error_None)
            and then Result_Ref = Lisp.Runtime.Quote_Form_Result (RT, Expr)
+       else
+           True)
+       and then
+       (if Fuel > 1
+         and then RT.Known.If_Id /= RT.Known.Quote_Id
+         and then Lisp.Runtime.If_Immediate_Result_Form (RT, Expr)
+        then
+           Lisp.Types."=" (Error, Lisp.Types.Error_None)
+           and then Result_Ref = Lisp.Runtime.If_Immediate_Result (RT, Expr)
         else
            True)
        ;

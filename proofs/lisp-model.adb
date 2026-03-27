@@ -314,6 +314,7 @@ is
             | Lisp.Types.Integer_Cell =>
             Result_Ref := Expr;
             Error := Lisp.Types.Error_None;
+            pragma Assert (not Lisp.Runtime.If_Immediate_Result_Form (RT, Expr));
             pragma Assert (Pure_Data (RT.Store, Result_Ref));
          when Lisp.Types.Cons_Cell =>
             Head_Expr := Lisp.Store.Car (RT.Store, Expr);
@@ -324,7 +325,11 @@ is
             then
                Result_Ref := Lisp.Types.No_Ref;
                Error := Lisp.Types.Error_Type;
+               pragma Assert (not Lisp.Runtime.If_Immediate_Result_Form (RT, Expr));
             elsif Lisp.Store.Symbol_Value (RT.Store, Head_Expr) = RT.Known.Quote_Id then
+               pragma Assert
+                 (RT.Known.If_Id = RT.Known.Quote_Id
+                  or else not Lisp.Runtime.If_Immediate_Result_Form (RT, Expr));
                if not Quote_Args (RT.Store, Args_Expr) then
                   Result_Ref := Lisp.Types.No_Ref;
                   Error := Lisp.Types.Error_Type;
@@ -347,6 +352,8 @@ is
                if Lisp.Store.Kind_Of (RT.Store, Args_Expr) /= Lisp.Types.Cons_Cell then
                   Result_Ref := Lisp.Types.No_Ref;
                   Error := Lisp.Types.Error_Type;
+                  pragma Assert
+                    (Fuel <= 1 or else not Lisp.Runtime.If_Immediate_Result_Form (RT, Expr));
                   return;
                end if;
 
@@ -358,6 +365,8 @@ is
                then
                   Result_Ref := Lisp.Types.No_Ref;
                   Error := Lisp.Types.Error_Type;
+                  pragma Assert
+                    (Fuel <= 1 or else not Lisp.Runtime.If_Immediate_Result_Form (RT, Expr));
                   return;
                end if;
 
@@ -369,6 +378,8 @@ is
                then
                   Result_Ref := Lisp.Types.No_Ref;
                   Error := Lisp.Types.Error_Type;
+                  pragma Assert
+                    (Fuel <= 1 or else not Lisp.Runtime.If_Immediate_Result_Form (RT, Expr));
                   return;
                end if;
 
@@ -380,6 +391,8 @@ is
                then
                   Result_Ref := Lisp.Types.No_Ref;
                   Error := Lisp.Types.Error_Type;
+                  pragma Assert
+                    (Fuel <= 1 or else not Lisp.Runtime.If_Immediate_Result_Form (RT, Expr));
                   return;
                end if;
 
@@ -389,7 +402,21 @@ is
                then
                   Result_Ref := Lisp.Types.No_Ref;
                   Error := Lisp.Types.Error_Type;
+                  pragma Assert
+                    (Fuel <= 1 or else not Lisp.Runtime.If_Immediate_Result_Form (RT, Expr));
                   return;
+               end if;
+               if Lisp.Runtime.If_Immediate_Result_Form (RT, Expr) then
+                  pragma Assert (Lisp.Runtime.If_Form (RT, Expr));
+                  pragma Assert (Cond_Expr = Lisp.Runtime.If_Form_Cond (RT, Expr));
+                  pragma Assert (Then_Expr = Lisp.Runtime.If_Form_Then (RT, Expr));
+                  pragma Assert (Else_Expr = Lisp.Runtime.If_Form_Else (RT, Expr));
+                  pragma Assert (Pure_Subset_Expr (RT, Cond_Expr));
+                  pragma Assert (Pure_Subset_Expr (RT, Then_Expr));
+                  pragma Assert (Pure_Subset_Expr (RT, Else_Expr));
+                  pragma Assert (Lisp.Runtime.Immediate_Result_Form (RT, Cond_Expr));
+                  pragma Assert (Lisp.Runtime.Immediate_Result_Form (RT, Then_Expr));
+                  pragma Assert (Lisp.Runtime.Immediate_Result_Form (RT, Else_Expr));
                end if;
                Eval_Pure_Closed
                  (RT,
@@ -398,9 +425,29 @@ is
                   Fuel - 1,
                   Condition_Result,
                   Condition_Error);
+               if Fuel > 1
+                 and then RT.Known.If_Id /= RT.Known.Quote_Id
+                 and then Lisp.Runtime.If_Immediate_Result_Form (RT, Expr)
+               then
+                  pragma Assert (Condition_Error = Lisp.Types.Error_None);
+                  if Lisp.Store.Kind_Of (RT.Store, Cond_Expr) = Lisp.Types.Nil_Cell
+                    or else Lisp.Store.Kind_Of (RT.Store, Cond_Expr) = Lisp.Types.True_Cell
+                    or else Lisp.Store.Kind_Of (RT.Store, Cond_Expr) = Lisp.Types.Integer_Cell
+                  then
+                     pragma Assert (Condition_Result = Cond_Expr);
+                  else
+                     pragma Assert (Lisp.Runtime.Quote_Form (RT, Cond_Expr));
+                     pragma Assert
+                       (Condition_Result = Lisp.Runtime.Quote_Form_Result (RT, Cond_Expr));
+                  end if;
+                  pragma Assert
+                    (Condition_Result = Lisp.Runtime.Immediate_Result (RT, Cond_Expr));
+               end if;
                if Condition_Error /= Lisp.Types.Error_None then
                   Result_Ref := Lisp.Types.No_Ref;
                   Error := Condition_Error;
+                  pragma Assert
+                    (Fuel <= 1 or else not Lisp.Runtime.If_Immediate_Result_Form (RT, Expr));
                   return;
                end if;
                if Is_Truth (Condition_Result) then
@@ -411,6 +458,29 @@ is
                      Fuel - 1,
                      Result_Ref,
                      Error);
+                  if Fuel > 1
+                    and then RT.Known.If_Id /= RT.Known.Quote_Id
+                    and then Lisp.Runtime.If_Immediate_Result_Form (RT, Expr)
+                  then
+                     pragma Assert
+                       (Condition_Result = Lisp.Runtime.Immediate_Result (RT, Cond_Expr));
+                     pragma Assert (Condition_Result /= Lisp.Store.Nil_Ref);
+                     pragma Assert (Error = Lisp.Types.Error_None);
+                     if Lisp.Store.Kind_Of (RT.Store, Then_Expr) = Lisp.Types.Nil_Cell
+                       or else Lisp.Store.Kind_Of (RT.Store, Then_Expr) = Lisp.Types.True_Cell
+                       or else Lisp.Store.Kind_Of (RT.Store, Then_Expr) = Lisp.Types.Integer_Cell
+                     then
+                        pragma Assert (Result_Ref = Then_Expr);
+                     else
+                        pragma Assert (Lisp.Runtime.Quote_Form (RT, Then_Expr));
+                        pragma Assert
+                          (Result_Ref = Lisp.Runtime.Quote_Form_Result (RT, Then_Expr));
+                     end if;
+                     pragma Assert
+                       (Result_Ref = Lisp.Runtime.Immediate_Result (RT, Then_Expr));
+                     pragma Assert
+                       (Result_Ref = Lisp.Runtime.If_Immediate_Result (RT, Expr));
+                  end if;
                else
                   Eval_Pure_Closed
                     (RT,
@@ -419,8 +489,39 @@ is
                      Fuel - 1,
                      Result_Ref,
                      Error);
+                  if Fuel > 1
+                    and then RT.Known.If_Id /= RT.Known.Quote_Id
+                    and then Lisp.Runtime.If_Immediate_Result_Form (RT, Expr)
+                  then
+                     pragma Assert
+                       (Condition_Result = Lisp.Runtime.Immediate_Result (RT, Cond_Expr));
+                     pragma Assert (Condition_Result = Lisp.Store.Nil_Ref);
+                     pragma Assert (Error = Lisp.Types.Error_None);
+                     if Lisp.Store.Kind_Of (RT.Store, Else_Expr) = Lisp.Types.Nil_Cell
+                       or else Lisp.Store.Kind_Of (RT.Store, Else_Expr) = Lisp.Types.True_Cell
+                       or else Lisp.Store.Kind_Of (RT.Store, Else_Expr) = Lisp.Types.Integer_Cell
+                     then
+                        pragma Assert (Result_Ref = Else_Expr);
+                     else
+                        pragma Assert (Lisp.Runtime.Quote_Form (RT, Else_Expr));
+                        pragma Assert
+                          (Result_Ref = Lisp.Runtime.Quote_Form_Result (RT, Else_Expr));
+                     end if;
+                     pragma Assert
+                       (Result_Ref = Lisp.Runtime.Immediate_Result (RT, Else_Expr));
+                     pragma Assert
+                       (Result_Ref = Lisp.Runtime.If_Immediate_Result (RT, Expr));
+                  end if;
+               end if;
+               if Fuel > 1
+                 and then RT.Known.If_Id /= RT.Known.Quote_Id
+                 and then Lisp.Runtime.If_Immediate_Result_Form (RT, Expr)
+               then
+                  pragma Assert (Error = Lisp.Types.Error_None);
+                  pragma Assert (Result_Ref = Lisp.Runtime.If_Immediate_Result (RT, Expr));
                end if;
             elsif Lisp.Store.Symbol_Value (RT.Store, Head_Expr) = RT.Known.Begin_Id then
+               pragma Assert (not Lisp.Runtime.If_Immediate_Result_Form (RT, Expr));
                if not Pure_Subset_Forms (RT, Args_Expr) then
                   Result_Ref := Lisp.Types.No_Ref;
                   Error := Lisp.Types.Error_Type;
@@ -482,12 +583,14 @@ is
             else
                Result_Ref := Lisp.Types.No_Ref;
                Error := Lisp.Types.Error_Type;
+               pragma Assert (not Lisp.Runtime.If_Immediate_Result_Form (RT, Expr));
             end if;
          when Lisp.Types.Symbol_Cell
             | Lisp.Types.Primitive_Cell
             | Lisp.Types.Closure_Cell =>
             Result_Ref := Lisp.Types.No_Ref;
             Error := Lisp.Types.Error_Type;
+            pragma Assert (not Lisp.Runtime.If_Immediate_Result_Form (RT, Expr));
       end case;
    end Eval_Pure_Closed;
 end Lisp.Model;
