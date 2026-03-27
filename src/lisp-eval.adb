@@ -349,10 +349,24 @@ package body Lisp.Eval with SPARK_Mode is
                         if Result_Ref = Lisp.Types.No_Ref then
                            Error := Lisp.Types.Error_Syntax;
                         else
+                           pragma Assert (Lisp.Runtime.Quote_Form (RT, Expr));
+                           pragma Assert (Result_Ref = Lisp.Runtime.Quote_Form_Result (RT, Expr));
+                           pragma Assert (Lisp.Store.Is_Valid_Ref (RT.Store, Result_Ref));
                            Error := Lisp.Types.Error_None;
                         end if;
                      end if;
                   end if;
+                  pragma Assert
+                    ((if Lisp.Runtime.Quote_Form (RT, Expr) then
+                         Error = Lisp.Types.Error_None
+                         and then Result_Ref = Lisp.Runtime.Quote_Form_Result (RT, Expr)
+                      else
+                         True));
+                  pragma Assert
+                    ((if Error = Lisp.Types.Error_None then
+                         Lisp.Store.Is_Valid_Ref (RT.Store, Result_Ref)
+                      else
+                         Result_Ref = Lisp.Types.No_Ref));
                   Assert_Frames_Preserved;
                   return;
                elsif Name_Id = RT.Known.If_Id then

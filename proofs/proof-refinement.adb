@@ -15,15 +15,18 @@ procedure Proof.Refinement with SPARK_Mode is
    with
      Ghost
    is
-      Model_RT     : Lisp.Runtime.State;
-      Exec_RT      : Lisp.Runtime.State;
-      Model_Expr   : Lisp.Types.Cell_Ref;
-      Exec_Expr    : Lisp.Types.Cell_Ref;
-      Next_Pos     : Natural;
-      Model_Result : Lisp.Types.Cell_Ref;
-      Exec_Result  : Lisp.Types.Cell_Ref;
-      Model_Error  : Lisp.Types.Error_Code;
-      Exec_Error   : Lisp.Types.Error_Code;
+      Model_RT         : Lisp.Runtime.State;
+      Initial_RT       : Lisp.Runtime.State;
+      Exec_RT          : Lisp.Runtime.State;
+      Model_Expr       : Lisp.Types.Cell_Ref;
+      Initial_Expr     : Lisp.Types.Cell_Ref;
+      Exec_Expr        : Lisp.Types.Cell_Ref;
+      Next_Pos         : Natural;
+      Model_Result     : Lisp.Types.Cell_Ref;
+      Exec_Result      : Lisp.Types.Cell_Ref;
+      Model_Error      : Lisp.Types.Error_Code;
+      Exec_Error       : Lisp.Types.Error_Code;
+      Quoted_Result_Ref : Lisp.Types.Cell_Ref;
    begin
       if Source'Length = 0
         or else Source'First /= 1
@@ -42,6 +45,8 @@ procedure Proof.Refinement with SPARK_Mode is
          return;
       end if;
 
+      Initial_RT := Model_RT;
+      Initial_Expr := Model_Expr;
       Exec_RT := Model_RT;
       Exec_Expr := Model_Expr;
       Exec_Error := Lisp.Types.Error_None;
@@ -89,17 +94,25 @@ procedure Proof.Refinement with SPARK_Mode is
       if Model_Error = Lisp.Types.Error_None
         and then Exec_Error = Lisp.Types.Error_None
       then
-         case Lisp.Store.Kind_Of (Model_RT.Store, Model_Expr) is
-            when Lisp.Types.Nil_Cell
-               | Lisp.Types.True_Cell
-               | Lisp.Types.Integer_Cell =>
-               pragma Assert (Model_Result = Model_Expr);
-               pragma Assert (Exec_Result = Exec_Expr);
-               pragma Assert (Model_Expr = Exec_Expr);
-               pragma Assert (Model_Result = Exec_Result);
-            when others =>
-               null;
-         end case;
+         if Lisp.Runtime.Quote_Form (Initial_RT, Initial_Expr) then
+            Lisp.Model.Prove_Pure_Subset_Quote_Result (Initial_RT, Initial_Expr);
+            Quoted_Result_Ref := Lisp.Runtime.Quote_Form_Result (Initial_RT, Initial_Expr);
+            pragma Assert (Model_Result = Quoted_Result_Ref);
+            pragma Assert (Exec_Result = Quoted_Result_Ref);
+            pragma Assert (Model_Result = Exec_Result);
+         else
+            case Lisp.Store.Kind_Of (Model_RT.Store, Model_Expr) is
+               when Lisp.Types.Nil_Cell
+                  | Lisp.Types.True_Cell
+                  | Lisp.Types.Integer_Cell =>
+                  pragma Assert (Model_Result = Model_Expr);
+                  pragma Assert (Exec_Result = Exec_Expr);
+                  pragma Assert (Model_Expr = Exec_Expr);
+                  pragma Assert (Model_Result = Exec_Result);
+               when others =>
+                  null;
+            end case;
+         end if;
       end if;
 
    end Readable_Result_Refines_Model;

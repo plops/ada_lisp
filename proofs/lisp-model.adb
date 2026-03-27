@@ -93,6 +93,14 @@ is
       end case;
    end Prove_Pure_Data_Readable;
 
+   procedure Prove_Pure_Subset_Quote_Result
+     (RT   : Lisp.Runtime.State;
+      Expr : Lisp.Types.Cell_Ref) is
+   begin
+      pragma Assert (Pure_Subset_Expr (RT, Expr));
+      pragma Assert (Pure_Data (RT.Store, Lisp.Runtime.Quote_Form_Result (RT, Expr)));
+   end Prove_Pure_Subset_Quote_Result;
+
    function Pure_Subset_Expr
      (RT   : Lisp.Runtime.State;
       Expr : Lisp.Types.Cell_Ref) return Boolean is
@@ -129,6 +137,14 @@ is
                     Lisp.Store.Symbol_Value (RT.Store, Head_Expr);
                begin
                   if Name_Id = RT.Known.Quote_Id then
+                     if Quote_Args (RT.Store, Args_Expr) then
+                        pragma Assert (Lisp.Runtime.Quote_Form (RT, Expr));
+                        pragma Assert
+                          (Lisp.Runtime.Quote_Form_Result (RT, Expr) =
+                             Lisp.Store.Car (RT.Store, Args_Expr));
+                        pragma Assert
+                          (Pure_Data (RT.Store, Lisp.Runtime.Quote_Form_Result (RT, Expr)));
+                     end if;
                      return Quote_Args (RT.Store, Args_Expr);
                   elsif Name_Id = RT.Known.If_Id then
                      if Lisp.Store.Kind_Of (RT.Store, Args_Expr) /= Lisp.Types.Cons_Cell then
@@ -312,9 +328,19 @@ is
                   Error := Lisp.Types.Error_Type;
                else
                   Result_Ref := Lisp.Store.Car (RT.Store, Args_Expr);
+                  pragma Assert (Lisp.Runtime.Quote_Form (RT, Expr));
+                  pragma Assert (Result_Ref = Lisp.Runtime.Quote_Form_Result (RT, Expr));
                   Error := Lisp.Types.Error_None;
                   pragma Assert (Pure_Data (RT.Store, Result_Ref));
                end if;
+               pragma Assert
+                 ((if Lisp.Runtime.Quote_Form (RT, Expr)
+                      and then Pure_Data (RT.Store, Lisp.Runtime.Quote_Form_Result (RT, Expr))
+                   then
+                      Error = Lisp.Types.Error_None
+                      and then Result_Ref = Lisp.Runtime.Quote_Form_Result (RT, Expr)
+                   else
+                      True));
             elsif Lisp.Store.Symbol_Value (RT.Store, Head_Expr) = RT.Known.If_Id then
                if Lisp.Store.Kind_Of (RT.Store, Args_Expr) /= Lisp.Types.Cons_Cell then
                   Result_Ref := Lisp.Types.No_Ref;

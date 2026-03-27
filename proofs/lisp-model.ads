@@ -61,12 +61,34 @@ is
        and then Pure_Data (RT.Store, Expr),
      Post => Readable_Result (RT, Expr);
 
+   procedure Prove_Pure_Subset_Quote_Result
+     (RT   : Lisp.Runtime.State;
+      Expr : Lisp.Types.Cell_Ref)
+   with
+     Ghost,
+     Pre =>
+       Lisp.Runtime.Valid (RT)
+       and then Lisp.Store.Is_Valid_Ref (RT.Store, Expr)
+       and then Pure_Subset_Expr (RT, Expr)
+       and then Lisp.Runtime.Quote_Form (RT, Expr),
+     Post =>
+       Pure_Data (RT.Store, Lisp.Runtime.Quote_Form_Result (RT, Expr));
+
    function Pure_Subset_Expr
      (RT   : Lisp.Runtime.State;
       Expr : Lisp.Types.Cell_Ref) return Boolean
    with
      Pre => Lisp.Runtime.Valid (RT)
        and then (Expr = Lisp.Types.No_Ref or else Lisp.Store.Is_Valid_Ref (RT.Store, Expr)),
+     Post =>
+       (if Pure_Subset_Expr'Result
+         and then Expr /= Lisp.Types.No_Ref
+         and then Lisp.Store.Is_Valid_Ref (RT.Store, Expr)
+         and then Lisp.Runtime.Quote_Form (RT, Expr)
+        then
+           Pure_Data (RT.Store, Lisp.Runtime.Quote_Form_Result (RT, Expr))
+        else
+           True),
      Subprogram_Variant => (Decreases => Expr);
 
    function Readable_Result
@@ -156,6 +178,15 @@ is
         then
            Lisp.Types."=" (Error, Lisp.Types.Error_None)
            and then Result_Ref = Expr
+       else
+           True)
+       and then
+       (if Fuel > 0
+         and then Lisp.Runtime.Quote_Form (RT, Expr)
+         and then Pure_Data (RT.Store, Lisp.Runtime.Quote_Form_Result (RT, Expr))
+        then
+           Lisp.Types."=" (Error, Lisp.Types.Error_None)
+           and then Result_Ref = Lisp.Runtime.Quote_Form_Result (RT, Expr)
         else
            True);
 end Lisp.Model;

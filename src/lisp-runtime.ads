@@ -4,6 +4,8 @@ with Lisp.Symbols;
 with Lisp.Types;
 
 package Lisp.Runtime with SPARK_Mode is
+   use type Lisp.Types.Cell_Kind;
+
    type Well_Known_Symbols is record
       Quote_Id  : Lisp.Types.Symbol_Id := 0;
       If_Id     : Lisp.Types.Symbol_Id := 0;
@@ -38,6 +40,65 @@ package Lisp.Runtime with SPARK_Mode is
      (Lisp.Symbols.Valid (RT.Symbols)
       and then Lisp.Store.Valid (RT.Store)
       and then Lisp.Env.Valid (RT.Env));
+
+   function Single_Argument_List
+     (S    : Lisp.Store.Arena;
+      Args : Lisp.Types.Cell_Ref) return Boolean is
+     (Args /= Lisp.Types.No_Ref
+      and then Lisp.Store.Is_Valid_Ref (S, Args)
+      and then Lisp.Store.Kind_Of (S, Args) = Lisp.Types.Cons_Cell
+      and then Lisp.Store.Car (S, Args) /= Lisp.Types.No_Ref
+      and then Lisp.Store.Cdr (S, Args) = Lisp.Store.Nil_Ref)
+   with
+     Pre => Lisp.Store.Valid (S)
+       and then (Args = Lisp.Types.No_Ref or else Lisp.Store.Is_Valid_Ref (S, Args)),
+     Post =>
+       (if Single_Argument_List'Result then
+           Args /= Lisp.Types.No_Ref
+           and then Lisp.Store.Is_Valid_Ref (S, Args)
+           and then Lisp.Store.Kind_Of (S, Args) = Lisp.Types.Cons_Cell
+           and then Lisp.Store.Car (S, Args) /= Lisp.Types.No_Ref
+           and then Lisp.Store.Cdr (S, Args) = Lisp.Store.Nil_Ref
+        else
+           True);
+
+   function Quote_Form
+     (RT   : State;
+      Expr : Lisp.Types.Cell_Ref) return Boolean is
+     (Lisp.Store.Kind_Of (RT.Store, Expr) = Lisp.Types.Cons_Cell
+      and then Lisp.Store.Car (RT.Store, Expr) /= Lisp.Types.No_Ref
+      and then Lisp.Store.Cdr (RT.Store, Expr) /= Lisp.Types.No_Ref
+      and then
+      Lisp.Store.Kind_Of (RT.Store, Lisp.Store.Car (RT.Store, Expr)) = Lisp.Types.Symbol_Cell
+      and then
+      Lisp.Store.Symbol_Value (RT.Store, Lisp.Store.Car (RT.Store, Expr)) = RT.Known.Quote_Id
+      and then Single_Argument_List (RT.Store, Lisp.Store.Cdr (RT.Store, Expr)))
+   with
+     Pre => Valid (RT)
+       and then Lisp.Store.Is_Valid_Ref (RT.Store, Expr),
+     Post =>
+       (if Quote_Form'Result then
+           Lisp.Store.Kind_Of (RT.Store, Expr) = Lisp.Types.Cons_Cell
+           and then Lisp.Store.Car (RT.Store, Expr) /= Lisp.Types.No_Ref
+           and then Lisp.Store.Cdr (RT.Store, Expr) /= Lisp.Types.No_Ref
+           and then
+           Lisp.Store.Kind_Of (RT.Store, Lisp.Store.Car (RT.Store, Expr)) = Lisp.Types.Symbol_Cell
+           and then
+           Lisp.Store.Symbol_Value (RT.Store, Lisp.Store.Car (RT.Store, Expr)) = RT.Known.Quote_Id
+           and then Single_Argument_List (RT.Store, Lisp.Store.Cdr (RT.Store, Expr))
+        else
+           True);
+
+   function Quote_Form_Result
+     (RT   : State;
+      Expr : Lisp.Types.Cell_Ref) return Lisp.Types.Cell_Ref is
+     (Lisp.Store.Car (RT.Store, Lisp.Store.Cdr (RT.Store, Expr)))
+   with
+     Pre => Valid (RT)
+       and then Lisp.Store.Is_Valid_Ref (RT.Store, Expr)
+       and then Quote_Form (RT, Expr),
+     Post =>
+       Lisp.Store.Is_Valid_Ref (RT.Store, Quote_Form_Result'Result);
 
    function Is_Reserved (RT : State; Name : Lisp.Types.Symbol_Id) return Boolean;
 end Lisp.Runtime;

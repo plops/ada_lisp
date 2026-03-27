@@ -35,6 +35,14 @@ package Lisp.Eval with SPARK_Mode is
            Lisp.Types."=" (Error, Lisp.Types.Error_None)
            and then Result_Ref = Expr
         else
+           True)
+       and then
+       (if Fuel > 0
+         and then Lisp.Runtime.Quote_Form (RT'Old, Expr)
+        then
+           Lisp.Types."=" (Error, Lisp.Types.Error_None)
+           and then Result_Ref = Lisp.Runtime.Quote_Form_Result (RT'Old, Expr)
+        else
            True),
      Subprogram_Variant => (Decreases => Fuel);
 end Lisp.Eval;
