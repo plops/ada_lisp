@@ -104,8 +104,7 @@ is
        (if Pure_Subset_Expr'Result
          and then Expr /= Lisp.Types.No_Ref
          and then Lisp.Store.Is_Valid_Ref (RT.Store, Expr)
-         and then RT.Known.Begin_Id /= RT.Known.Quote_Id
-         and then RT.Known.Begin_Id /= RT.Known.If_Id
+         and then Lisp.Runtime.Quote_If_Begin_Known (RT)
          and then Lisp.Runtime.Begin_Single_Immediate_Result_Form (RT, Expr)
         then
            Pure_Subset_Expr
@@ -223,8 +222,7 @@ is
            True)
        and then
        (if Fuel > 2
-         and then RT.Known.Begin_Id /= RT.Known.Quote_Id
-         and then RT.Known.Begin_Id /= RT.Known.If_Id
+         and then Lisp.Runtime.Quote_If_Begin_Known (RT)
          and then Lisp.Runtime.Begin_Single_Immediate_Result_Form (RT, Expr)
         then
            Lisp.Types."=" (Error, Lisp.Types.Error_None)

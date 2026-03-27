@@ -26,6 +26,11 @@ package Lisp.Parser with SPARK_Mode is
         else
            True)
        and then
+       (if Lisp.Runtime.Quote_If_Begin_Known (RT'Old) then
+           Lisp.Runtime.Quote_If_Begin_Known (RT)
+        else
+           True)
+       and then
        (if Lisp.Types."=" (Error, Lisp.Types.Error_None) then
            Lisp.Store.Is_Valid_Ref (RT.Store, Ref)
         else

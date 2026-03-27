@@ -88,8 +88,7 @@ package Lisp.Eval with SPARK_Mode is
        and then Lisp.Env.Frame_Valid (RT.Env, Current_Frame)
        and then Lisp.Store.Is_Valid_Ref (RT.Store, Expr)
        and then Fuel > 2
-       and then RT.Known.Begin_Id /= RT.Known.Quote_Id
-       and then RT.Known.Begin_Id /= RT.Known.If_Id
+       and then Lisp.Runtime.Quote_If_Begin_Known (RT)
        and then Lisp.Runtime.Begin_Single_Immediate_Result_Form (RT, Expr),
      Post => Lisp.Types."=" (Error, Lisp.Types.Error_None)
        and then Result_Ref = Lisp.Runtime.Begin_Single_Immediate_Result (RT, Expr);

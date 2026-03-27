@@ -8,6 +8,7 @@ package Lisp.Runtime with SPARK_Mode is
 
    Quote_Name : constant String := "quote";
    If_Name    : constant String := "if";
+   Begin_Name : constant String := "begin";
 
    type Well_Known_Symbols is record
       Quote_Id  : Lisp.Types.Symbol_Id := 0;
@@ -57,6 +58,18 @@ package Lisp.Runtime with SPARK_Mode is
    with
      Pre => Valid (RT);
 
+   function Quote_If_Begin_Known (RT : State) return Boolean is
+     (Quote_If_Known (RT)
+      and then
+      Lisp.Symbols.Equal_Slice
+        (RT.Symbols,
+         RT.Known.Begin_Id,
+         Begin_Name,
+         Begin_Name'First,
+         Begin_Name'Last))
+   with
+     Pre => Valid (RT);
+
    procedure Prove_Quote_If_Known_Distinct (RT : in State)
    with
      Ghost,
@@ -64,12 +77,22 @@ package Lisp.Runtime with SPARK_Mode is
        and then Quote_If_Known (RT),
      Post => RT.Known.Quote_Id /= RT.Known.If_Id;
 
+   procedure Prove_Quote_If_Begin_Known_Distinct (RT : in State)
+   with
+     Ghost,
+     Pre => Valid (RT)
+       and then Quote_If_Begin_Known (RT),
+     Post =>
+       RT.Known.Quote_Id /= RT.Known.If_Id
+       and then RT.Known.Quote_Id /= RT.Known.Begin_Id
+       and then RT.Known.If_Id /= RT.Known.Begin_Id;
+
    procedure Initialize (RT : in out State; Error : out Lisp.Types.Error_Code)
    with
      Post => Valid (RT)
        and then
        (if Lisp.Types."=" (Error, Lisp.Types.Error_None) then
-           Quote_If_Known (RT)
+           Quote_If_Begin_Known (RT)
            and then
            RT.Known.Quote_Id /= RT.Known.If_Id
         else

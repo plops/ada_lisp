@@ -67,11 +67,65 @@ package body Lisp.Runtime with SPARK_Mode is
          If_Name'Length);
    end Prove_Quote_If_Known_Distinct;
 
+   procedure Prove_Quote_If_Begin_Known_Distinct (RT : in State) is
+   begin
+      pragma Assert (Quote_If_Known (RT));
+      pragma Assert
+        (Lisp.Symbols.Equal_Slice
+           (RT.Symbols,
+            RT.Known.Quote_Id,
+            Quote_Name,
+            Quote_Name'First,
+            Quote_Name'Last));
+      pragma Assert
+        (Lisp.Symbols.Equal_Slice
+           (RT.Symbols,
+            RT.Known.Begin_Id,
+            Begin_Name,
+            Begin_Name'First,
+            Begin_Name'Last));
+      Prove_Quote_If_Known_Distinct (RT);
+      pragma Assert
+        (Lisp.Symbols.Length_Of (RT.Symbols, RT.Known.Quote_Id) =
+         Quote_Name'Length);
+      pragma Assert
+        (Lisp.Symbols.Length_Of (RT.Symbols, RT.Known.Begin_Id) =
+         Begin_Name'Length);
+      pragma Assert
+        (Lisp.Symbols.Char_At (RT.Symbols, RT.Known.Quote_Id, 1) =
+         Quote_Name (Quote_Name'First));
+      pragma Assert
+        (Lisp.Symbols.Char_At (RT.Symbols, RT.Known.Begin_Id, 1) =
+         Begin_Name (Begin_Name'First));
+      if RT.Known.Quote_Id = RT.Known.Begin_Id then
+         pragma Assert
+           (Lisp.Symbols.Char_At (RT.Symbols, RT.Known.Quote_Id, 1) =
+            Quote_Name (Quote_Name'First));
+         pragma Assert
+           (Lisp.Symbols.Char_At (RT.Symbols, RT.Known.Quote_Id, 1) =
+            Begin_Name (Begin_Name'First));
+      end if;
+      pragma Assert
+        (Lisp.Symbols.Length_Of (RT.Symbols, RT.Known.Begin_Id) =
+         Begin_Name'Length);
+      pragma Assert
+        (Lisp.Symbols.Length_Of (RT.Symbols, RT.Known.If_Id) =
+         If_Name'Length);
+      Lisp.Symbols.Prove_Different_Length_Ids_Distinct
+        (RT.Symbols,
+         RT.Known.Begin_Id,
+         Begin_Name'Length,
+         RT.Known.If_Id,
+         If_Name'Length);
+   end Prove_Quote_If_Begin_Known_Distinct;
+
    procedure Initialize (RT : in out State; Error : out Lisp.Types.Error_Code) is
       Name_Id     : Lisp.Types.Symbol_Id;
       Quote_Id    : Lisp.Types.Symbol_Id;
       If_Id       : Lisp.Types.Symbol_Id;
+      Begin_Id    : Lisp.Types.Symbol_Id;
       Quote_Table : Lisp.Symbols.Table;
+      If_Table    : Lisp.Symbols.Table;
    begin
       Lisp.Symbols.Initialize (RT.Symbols);
       Lisp.Store.Initialize (RT.Store);
@@ -93,7 +147,7 @@ package body Lisp.Runtime with SPARK_Mode is
       Intern_Known (RT, "define", 1, 6, Name_Id, Error);
       if Error /= Lisp.Types.Error_None then return; end if;
       RT.Known.Define_Id := Name_Id;
-      Intern_Known (RT, "begin", 1, 5, Name_Id, Error);
+      Intern_Known (RT, Begin_Name, Begin_Name'First, Begin_Name'Last, Name_Id, Error);
       if Error /= Lisp.Types.Error_None then return; end if;
       RT.Known.Begin_Id := Name_Id;
       Intern_Known (RT, "atom", 1, 4, Name_Id, Error);
@@ -187,11 +241,74 @@ package body Lisp.Runtime with SPARK_Mode is
          Lisp.Symbols.Prove_Different_Length_Ids_Distinct
            (Symbols, Quote_Id, Quote_Name'Length, If_Id, If_Name'Length);
          pragma Assert (Quote_Id /= If_Id);
+         pragma Assert
+           (Lisp.Symbols.Equal_Slice
+              (Symbols, Quote_Id, Quote_Name, Quote_Name'First, Quote_Name'Last));
+         pragma Assert
+           (Lisp.Symbols.Equal_Slice
+              (Symbols, If_Id, If_Name, If_Name'First, If_Name'Last));
+         If_Table := Symbols;
+         Lisp.Symbols.Intern
+           (Symbols, Begin_Name, Begin_Name'First, Begin_Name'Last, Begin_Id, Error);
+         if Error /= Lisp.Types.Error_None then return; end if;
+         pragma Assert
+           (Lisp.Symbols.Equal_Slice
+              (Symbols, Begin_Id, Begin_Name, Begin_Name'First, Begin_Name'Last));
+         pragma Assert
+           (Lisp.Symbols.Entries_Preserved (If_Table, Symbols));
+         Lisp.Symbols.Prove_Equal_Slice_Preserved
+           (If_Table,
+            Symbols,
+            Quote_Id,
+            Quote_Name,
+            Quote_Name'First,
+            Quote_Name'Last);
+         Lisp.Symbols.Prove_Equal_Slice_Preserved
+           (If_Table,
+            Symbols,
+            If_Id,
+            If_Name,
+            If_Name'First,
+            If_Name'Last);
+         pragma Assert
+           (Lisp.Symbols.Equal_Slice
+              (Symbols, Quote_Id, Quote_Name, Quote_Name'First, Quote_Name'Last));
+         pragma Assert
+           (Lisp.Symbols.Equal_Slice
+              (Symbols, If_Id, If_Name, If_Name'First, If_Name'Last));
+         pragma Assert
+           (Lisp.Symbols.Equal_Slice
+              (Symbols, Begin_Id, Begin_Name, Begin_Name'First, Begin_Name'Last));
+         pragma Assert
+           (Lisp.Symbols.Length_Of (Symbols, Quote_Id) = Quote_Name'Length);
+         pragma Assert
+           (Lisp.Symbols.Length_Of (Symbols, Begin_Id) = Begin_Name'Length);
+         pragma Assert
+           (Lisp.Symbols.Char_At (Symbols, Quote_Id, 1) =
+            Quote_Name (Quote_Name'First));
+         pragma Assert
+           (Lisp.Symbols.Char_At (Symbols, Begin_Id, 1) =
+            Begin_Name (Begin_Name'First));
+         if Quote_Id = Begin_Id then
+            pragma Assert
+              (Lisp.Symbols.Char_At (Symbols, Quote_Id, 1) =
+               Quote_Name (Quote_Name'First));
+            pragma Assert
+              (Lisp.Symbols.Char_At (Symbols, Quote_Id, 1) =
+               Begin_Name (Begin_Name'First));
+         end if;
+         Lisp.Symbols.Prove_Different_Length_Ids_Distinct
+           (Symbols, Begin_Id, Begin_Name'Length, If_Id, If_Name'Length);
+         pragma Assert (Quote_Id /= Begin_Id);
+         pragma Assert (Begin_Id /= If_Id);
       end;
       RT.Known.Quote_Id := Quote_Id;
       RT.Known.If_Id := If_Id;
-      pragma Assert (Quote_If_Known (RT));
+      RT.Known.Begin_Id := Begin_Id;
+      pragma Assert (Quote_If_Begin_Known (RT));
       pragma Assert (RT.Known.Quote_Id /= RT.Known.If_Id);
+      pragma Assert (RT.Known.Quote_Id /= RT.Known.Begin_Id);
+      pragma Assert (RT.Known.If_Id /= RT.Known.Begin_Id);
 
       pragma Assert (Lisp.Symbols.Valid (RT.Symbols));
       pragma Assert (Lisp.Store.Valid (RT.Store));

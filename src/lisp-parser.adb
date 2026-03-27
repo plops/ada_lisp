@@ -41,6 +41,11 @@ package body Lisp.Parser with SPARK_Mode is
            Lisp.Runtime.Quote_If_Known (RT)
         else
            True)
+       and then
+       (if Lisp.Runtime.Quote_If_Begin_Known (RT'Old) then
+           Lisp.Runtime.Quote_If_Begin_Known (RT)
+        else
+           True)
        and then Store_Refs_Preserved (RT.Store'Old, RT.Store)
        and then
        (if Lisp.Types."=" (Error, Lisp.Types.Error_None) then
@@ -101,6 +106,19 @@ package body Lisp.Parser with SPARK_Mode is
        and then Lisp.Runtime.Quote_If_Known (Old_RT),
      Post => Lisp.Runtime.Quote_If_Known (New_RT);
 
+   procedure Prove_Quote_If_Begin_Known_Preserved
+     (Old_RT : in Lisp.Runtime.State;
+      New_RT : in Lisp.Runtime.State)
+   with
+     Ghost,
+     Pre =>
+       Lisp.Runtime.Valid (Old_RT)
+       and then Lisp.Runtime.Valid (New_RT)
+       and then Lisp.Runtime."=" (Old_RT.Known, New_RT.Known)
+       and then Lisp.Symbols.Entries_Preserved (Old_RT.Symbols, New_RT.Symbols)
+       and then Lisp.Runtime.Quote_If_Begin_Known (Old_RT),
+     Post => Lisp.Runtime.Quote_If_Begin_Known (New_RT);
+
    procedure Parse_Token_Expr
      (Source : in String;
       Tok    : in Lisp.Lexer.Token;
@@ -126,6 +144,11 @@ package body Lisp.Parser with SPARK_Mode is
        and then
        (if Lisp.Runtime.Quote_If_Known (RT'Old) then
            Lisp.Runtime.Quote_If_Known (RT)
+        else
+           True)
+       and then
+       (if Lisp.Runtime.Quote_If_Begin_Known (RT'Old) then
+           Lisp.Runtime.Quote_If_Begin_Known (RT)
         else
            True)
        and then Store_Refs_Preserved (RT.Store'Old, RT.Store)
@@ -155,6 +178,11 @@ package body Lisp.Parser with SPARK_Mode is
            Lisp.Runtime.Quote_If_Known (RT)
         else
            True)
+       and then
+       (if Lisp.Runtime.Quote_If_Begin_Known (RT'Old) then
+           Lisp.Runtime.Quote_If_Begin_Known (RT)
+        else
+           True)
        and then Store_Refs_Preserved (RT.Store'Old, RT.Store)
        and then
        (if Lisp.Types."=" (Error, Lisp.Types.Error_None) then
@@ -165,6 +193,8 @@ package body Lisp.Parser with SPARK_Mode is
       Index  : List_Element_Count := Elem_Count;
       Old_Store : constant Lisp.Store.Arena := RT.Store;
       Old_Quote_If_Known : constant Boolean := Lisp.Runtime.Quote_If_Known (RT);
+      Old_Quote_If_Begin_Known : constant Boolean :=
+        Lisp.Runtime.Quote_If_Begin_Known (RT);
    begin
       pragma Assert (Lisp.Store.Valid (RT.Store));
       pragma Assert (Lisp.Env.Valid (RT.Env));
@@ -175,6 +205,11 @@ package body Lisp.Parser with SPARK_Mode is
          pragma Loop_Invariant
            (if Old_Quote_If_Known then
                Lisp.Runtime.Quote_If_Known (RT)
+            else
+               True);
+         pragma Loop_Invariant
+           (if Old_Quote_If_Begin_Known then
+               Lisp.Runtime.Quote_If_Begin_Known (RT)
             else
                True);
          pragma Loop_Invariant (Store_Refs_Preserved (Old_Store, RT.Store));
@@ -259,6 +294,21 @@ package body Lisp.Parser with SPARK_Mode is
       pragma Assert (Lisp.Runtime.Quote_If_Known (New_RT));
    end Prove_Quote_If_Known_Preserved;
 
+   procedure Prove_Quote_If_Begin_Known_Preserved
+     (Old_RT : in Lisp.Runtime.State;
+      New_RT : in Lisp.Runtime.State) is
+   begin
+      Prove_Quote_If_Known_Preserved (Old_RT, New_RT);
+      Lisp.Symbols.Prove_Equal_Slice_Preserved
+        (Old_RT.Symbols,
+         New_RT.Symbols,
+         Old_RT.Known.Begin_Id,
+         Lisp.Runtime.Begin_Name,
+         Lisp.Runtime.Begin_Name'First,
+         Lisp.Runtime.Begin_Name'Last);
+      pragma Assert (Lisp.Runtime.Quote_If_Begin_Known (New_RT));
+   end Prove_Quote_If_Begin_Known_Preserved;
+
    procedure Parse_Atom
      (Source : in String;
       Tok    : in Lisp.Lexer.Token;
@@ -286,6 +336,11 @@ package body Lisp.Parser with SPARK_Mode is
        and then
        (if Lisp.Runtime.Quote_If_Known (RT'Old) then
            Lisp.Runtime.Quote_If_Known (RT)
+        else
+           True)
+       and then
+       (if Lisp.Runtime.Quote_If_Begin_Known (RT'Old) then
+           Lisp.Runtime.Quote_If_Begin_Known (RT)
         else
            True)
        and then Store_Refs_Preserved (RT.Store'Old, RT.Store)
@@ -330,6 +385,15 @@ package body Lisp.Parser with SPARK_Mode is
                pragma Assert (Lisp.Runtime.Quote_If_Known (RT));
          end case;
       end if;
+      if Lisp.Runtime.Quote_If_Begin_Known (Old_RT) then
+         case Tok.Kind is
+            when Lisp.Lexer.Tok_Symbol =>
+               pragma Assert (Lisp.Symbols.Entries_Preserved (Old_RT.Symbols, RT.Symbols));
+               Prove_Quote_If_Begin_Known_Preserved (Old_RT, RT);
+            when others =>
+               pragma Assert (Lisp.Runtime.Quote_If_Begin_Known (RT));
+         end case;
+      end if;
    end Parse_Atom;
 
    procedure Parse_List_Element
@@ -358,6 +422,11 @@ package body Lisp.Parser with SPARK_Mode is
        and then
        (if Lisp.Runtime.Quote_If_Known (RT'Old) then
            Lisp.Runtime.Quote_If_Known (RT)
+        else
+           True)
+       and then
+       (if Lisp.Runtime.Quote_If_Begin_Known (RT'Old) then
+           Lisp.Runtime.Quote_If_Begin_Known (RT)
         else
            True)
        and then Store_Refs_Preserved (RT.Store'Old, RT.Store)
@@ -410,6 +479,11 @@ package body Lisp.Parser with SPARK_Mode is
        and then
        (if Lisp.Runtime.Quote_If_Known (RT'Old) then
            Lisp.Runtime.Quote_If_Known (RT)
+        else
+           True)
+       and then
+       (if Lisp.Runtime.Quote_If_Begin_Known (RT'Old) then
+           Lisp.Runtime.Quote_If_Begin_Known (RT)
         else
            True)
        and then Store_Refs_Preserved (RT.Store'Old, RT.Store)
@@ -477,6 +551,11 @@ package body Lisp.Parser with SPARK_Mode is
        and then
        (if Lisp.Runtime.Quote_If_Known (RT'Old) then
            Lisp.Runtime.Quote_If_Known (RT)
+        else
+           True)
+       and then
+       (if Lisp.Runtime.Quote_If_Begin_Known (RT'Old) then
+           Lisp.Runtime.Quote_If_Begin_Known (RT)
         else
            True)
        and then Store_Refs_Preserved (RT.Store'Old, RT.Store)
@@ -563,6 +642,11 @@ package body Lisp.Parser with SPARK_Mode is
            Lisp.Runtime.Quote_If_Known (RT)
         else
            True)
+       and then
+       (if Lisp.Runtime.Quote_If_Begin_Known (RT'Old) then
+           Lisp.Runtime.Quote_If_Begin_Known (RT)
+        else
+           True)
        and then Store_Refs_Preserved (RT.Store'Old, RT.Store)
        and then
        (if Lisp.Types."=" (Error, Lisp.Types.Error_None) then
@@ -575,6 +659,8 @@ package body Lisp.Parser with SPARK_Mode is
       Count     : List_Element_Count := 0;
       Old_Store : constant Lisp.Store.Arena := RT.Store;
       Old_Quote_If_Known : constant Boolean := Lisp.Runtime.Quote_If_Known (RT);
+      Old_Quote_If_Begin_Known : constant Boolean :=
+        Lisp.Runtime.Quote_If_Begin_Known (RT);
    begin
       pragma Assert (Lisp.Symbols.Valid (RT.Symbols));
       pragma Assert (Lisp.Store.Valid (RT.Store));
@@ -587,6 +673,11 @@ package body Lisp.Parser with SPARK_Mode is
          pragma Loop_Invariant
            (if Old_Quote_If_Known then
                Lisp.Runtime.Quote_If_Known (RT)
+            else
+               True);
+         pragma Loop_Invariant
+           (if Old_Quote_If_Begin_Known then
+               Lisp.Runtime.Quote_If_Begin_Known (RT)
             else
                True);
          pragma Loop_Invariant (Store_Refs_Preserved (Old_Store, RT.Store));

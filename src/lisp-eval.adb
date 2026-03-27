@@ -997,6 +997,9 @@ package body Lisp.Eval with SPARK_Mode is
    begin
       pragma Assert (Lisp.Runtime.Single_Argument_List (RT.Store, Args_List));
       pragma Assert (Lisp.Runtime.Immediate_Result_Form (RT, Form_Ref));
+      Lisp.Runtime.Prove_Quote_If_Begin_Known_Distinct (RT);
+      pragma Assert (RT.Known.Begin_Id /= RT.Known.Quote_Id);
+      pragma Assert (RT.Known.Begin_Id /= RT.Known.If_Id);
 
       Eval_Begin (Exec_RT, Current_Frame, Args_List, Fuel - 1, Result_Ref, Error);
 

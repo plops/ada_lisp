@@ -538,10 +538,12 @@ is
             elsif Lisp.Store.Symbol_Value (RT.Store, Head_Expr) = RT.Known.Begin_Id then
                pragma Assert (not Lisp.Runtime.If_Immediate_Result_Form (RT, Expr));
                if Fuel > 2
-                 and then RT.Known.Begin_Id /= RT.Known.Quote_Id
-                 and then RT.Known.Begin_Id /= RT.Known.If_Id
+                 and then Lisp.Runtime.Quote_If_Begin_Known (RT)
                  and then Lisp.Runtime.Begin_Single_Immediate_Result_Form (RT, Expr)
                then
+                  Lisp.Runtime.Prove_Quote_If_Begin_Known_Distinct (RT);
+                  pragma Assert (RT.Known.Begin_Id /= RT.Known.Quote_Id);
+                  pragma Assert (RT.Known.Begin_Id /= RT.Known.If_Id);
                   Form_Expr := Lisp.Store.Car (RT.Store, Args_Expr);
                   pragma Assert (Lisp.Runtime.Single_Argument_List (RT.Store, Args_Expr));
                   pragma Assert (Form_Expr = Lisp.Store.Car (RT.Store, Args_Expr));
