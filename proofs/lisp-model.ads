@@ -188,5 +188,6 @@ is
            Lisp.Types."=" (Error, Lisp.Types.Error_None)
            and then Result_Ref = Lisp.Runtime.Quote_Form_Result (RT, Expr)
         else
-           True);
+           True)
+       ;
 end Lisp.Model;

@@ -180,15 +180,17 @@ is
                            declare
                               Else_Expr  : constant Lisp.Types.Cell_Ref := Lisp.Store.Car (RT.Store, Tail_2);
                               Final_Tail : constant Lisp.Types.Cell_Ref := Lisp.Store.Cdr (RT.Store, Tail_2);
-                           begin
-                              pragma Assert (Else_Expr < Tail_2);
-                              pragma Assert (Final_Tail < Tail_2);
-                              return Else_Expr /= Lisp.Types.No_Ref
+                              Result     : constant Boolean :=
+                                Else_Expr /= Lisp.Types.No_Ref
                                 and then Final_Tail /= Lisp.Types.No_Ref
                                 and then Final_Tail = Lisp.Store.Nil_Ref
                                 and then Pure_Subset_Expr (RT, Cond_Expr)
                                 and then Pure_Subset_Expr (RT, Then_Expr)
                                 and then Pure_Subset_Expr (RT, Else_Expr);
+                           begin
+                              pragma Assert (Else_Expr < Tail_2);
+                              pragma Assert (Final_Tail < Tail_2);
+                              return Result;
                            end;
                         end;
                      end;
@@ -389,7 +391,6 @@ is
                   Error := Lisp.Types.Error_Type;
                   return;
                end if;
-
                Eval_Pure_Closed
                  (RT,
                   Current_Frame,
@@ -402,7 +403,6 @@ is
                   Error := Condition_Error;
                   return;
                end if;
-
                if Is_Truth (Condition_Result) then
                   Eval_Pure_Closed
                     (RT,

@@ -100,5 +100,109 @@ package Lisp.Runtime with SPARK_Mode is
      Post =>
        Lisp.Store.Is_Valid_Ref (RT.Store, Quote_Form_Result'Result);
 
+   function If_Form
+     (RT   : State;
+      Expr : Lisp.Types.Cell_Ref) return Boolean
+   with
+     Pre => Valid (RT)
+       and then Lisp.Store.Is_Valid_Ref (RT.Store, Expr),
+     Post =>
+       (if If_Form'Result then
+           Lisp.Store.Kind_Of (RT.Store, Expr) = Lisp.Types.Cons_Cell
+           and then Lisp.Store.Car (RT.Store, Expr) /= Lisp.Types.No_Ref
+           and then Lisp.Store.Cdr (RT.Store, Expr) /= Lisp.Types.No_Ref
+           and then
+           Lisp.Store.Kind_Of (RT.Store, Lisp.Store.Car (RT.Store, Expr)) = Lisp.Types.Symbol_Cell
+           and then
+           Lisp.Store.Symbol_Value (RT.Store, Lisp.Store.Car (RT.Store, Expr)) = RT.Known.If_Id
+           and then
+           Lisp.Store.Kind_Of (RT.Store, Lisp.Store.Cdr (RT.Store, Expr)) = Lisp.Types.Cons_Cell
+           and then Lisp.Store.Car (RT.Store, Lisp.Store.Cdr (RT.Store, Expr)) /= Lisp.Types.No_Ref
+           and then Lisp.Store.Cdr (RT.Store, Lisp.Store.Cdr (RT.Store, Expr)) /= Lisp.Types.No_Ref
+           and then
+           Lisp.Store.Kind_Of
+             (RT.Store, Lisp.Store.Cdr (RT.Store, Lisp.Store.Cdr (RT.Store, Expr))) =
+             Lisp.Types.Cons_Cell
+           and then
+           Lisp.Store.Car
+             (RT.Store, Lisp.Store.Cdr (RT.Store, Lisp.Store.Cdr (RT.Store, Expr))) /=
+             Lisp.Types.No_Ref
+           and then
+           Lisp.Store.Cdr
+             (RT.Store, Lisp.Store.Cdr (RT.Store, Lisp.Store.Cdr (RT.Store, Expr))) /=
+             Lisp.Types.No_Ref
+           and then
+           Lisp.Store.Kind_Of
+             (RT.Store,
+              Lisp.Store.Cdr
+                (RT.Store, Lisp.Store.Cdr (RT.Store, Lisp.Store.Cdr (RT.Store, Expr)))) =
+             Lisp.Types.Cons_Cell
+           and then
+           Lisp.Store.Car
+             (RT.Store,
+              Lisp.Store.Cdr
+                (RT.Store, Lisp.Store.Cdr (RT.Store, Lisp.Store.Cdr (RT.Store, Expr)))) /=
+             Lisp.Types.No_Ref
+           and then
+           Lisp.Store.Cdr
+             (RT.Store,
+              Lisp.Store.Cdr
+                (RT.Store, Lisp.Store.Cdr (RT.Store, Lisp.Store.Cdr (RT.Store, Expr)))) =
+             Lisp.Store.Nil_Ref
+        else
+           True);
+
+   function If_Form_Cond
+     (RT   : State;
+      Expr : Lisp.Types.Cell_Ref) return Lisp.Types.Cell_Ref
+   with
+     Pre => Valid (RT)
+       and then Lisp.Store.Is_Valid_Ref (RT.Store, Expr)
+       and then If_Form (RT, Expr),
+     Post => Lisp.Store.Is_Valid_Ref (RT.Store, If_Form_Cond'Result);
+
+   function If_Form_Then
+     (RT   : State;
+      Expr : Lisp.Types.Cell_Ref) return Lisp.Types.Cell_Ref
+   with
+     Pre => Valid (RT)
+       and then Lisp.Store.Is_Valid_Ref (RT.Store, Expr)
+       and then If_Form (RT, Expr),
+     Post => Lisp.Store.Is_Valid_Ref (RT.Store, If_Form_Then'Result);
+
+   function If_Form_Else
+     (RT   : State;
+      Expr : Lisp.Types.Cell_Ref) return Lisp.Types.Cell_Ref
+   with
+     Pre => Valid (RT)
+       and then Lisp.Store.Is_Valid_Ref (RT.Store, Expr)
+       and then If_Form (RT, Expr),
+     Post => Lisp.Store.Is_Valid_Ref (RT.Store, If_Form_Else'Result);
+
+   function Immediate_Result_Form
+     (RT   : State;
+      Expr : Lisp.Types.Cell_Ref) return Boolean
+   with
+     Pre => Valid (RT)
+       and then Lisp.Store.Is_Valid_Ref (RT.Store, Expr),
+     Post =>
+       (if Immediate_Result_Form'Result
+         and then Lisp.Store.Kind_Of (RT.Store, Expr) /= Lisp.Types.Nil_Cell
+         and then Lisp.Store.Kind_Of (RT.Store, Expr) /= Lisp.Types.True_Cell
+         and then Lisp.Store.Kind_Of (RT.Store, Expr) /= Lisp.Types.Integer_Cell
+        then
+           Quote_Form (RT, Expr)
+        else
+           True);
+
+   function Immediate_Result
+     (RT   : State;
+      Expr : Lisp.Types.Cell_Ref) return Lisp.Types.Cell_Ref
+   with
+     Pre => Valid (RT)
+       and then Lisp.Store.Is_Valid_Ref (RT.Store, Expr)
+       and then Immediate_Result_Form (RT, Expr),
+     Post => Lisp.Store.Is_Valid_Ref (RT.Store, Immediate_Result'Result);
+
    function Is_Reserved (RT : State; Name : Lisp.Types.Symbol_Id) return Boolean;
 end Lisp.Runtime;

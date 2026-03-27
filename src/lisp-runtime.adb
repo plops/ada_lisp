@@ -133,6 +133,102 @@ package body Lisp.Runtime with SPARK_Mode is
       Error := Lisp.Types.Error_None;
    end Initialize;
 
+   function If_Form
+     (RT   : State;
+      Expr : Lisp.Types.Cell_Ref) return Boolean is
+      Head_Expr : Lisp.Types.Cell_Ref;
+      Args_Expr : Lisp.Types.Cell_Ref;
+      Tail_1    : Lisp.Types.Cell_Ref;
+      Tail_2    : Lisp.Types.Cell_Ref;
+   begin
+      if Lisp.Store.Kind_Of (RT.Store, Expr) /= Lisp.Types.Cons_Cell then
+         return False;
+      end if;
+
+      Head_Expr := Lisp.Store.Car (RT.Store, Expr);
+      Args_Expr := Lisp.Store.Cdr (RT.Store, Expr);
+      if Head_Expr = Lisp.Types.No_Ref
+        or else Args_Expr = Lisp.Types.No_Ref
+        or else Lisp.Store.Kind_Of (RT.Store, Head_Expr) /= Lisp.Types.Symbol_Cell
+        or else Lisp.Store.Symbol_Value (RT.Store, Head_Expr) /= RT.Known.If_Id
+        or else Lisp.Store.Kind_Of (RT.Store, Args_Expr) /= Lisp.Types.Cons_Cell
+      then
+         return False;
+      end if;
+
+      if Lisp.Store.Car (RT.Store, Args_Expr) = Lisp.Types.No_Ref then
+         return False;
+      end if;
+
+      Tail_1 := Lisp.Store.Cdr (RT.Store, Args_Expr);
+      if Tail_1 = Lisp.Types.No_Ref
+        or else Lisp.Store.Kind_Of (RT.Store, Tail_1) /= Lisp.Types.Cons_Cell
+        or else Lisp.Store.Car (RT.Store, Tail_1) = Lisp.Types.No_Ref
+      then
+         return False;
+      end if;
+
+      Tail_2 := Lisp.Store.Cdr (RT.Store, Tail_1);
+      return Tail_2 /= Lisp.Types.No_Ref
+        and then Lisp.Store.Kind_Of (RT.Store, Tail_2) = Lisp.Types.Cons_Cell
+        and then Lisp.Store.Car (RT.Store, Tail_2) /= Lisp.Types.No_Ref
+        and then Lisp.Store.Cdr (RT.Store, Tail_2) = Lisp.Store.Nil_Ref;
+   end If_Form;
+
+   function If_Form_Cond
+     (RT   : State;
+      Expr : Lisp.Types.Cell_Ref) return Lisp.Types.Cell_Ref is
+      Args_Expr : constant Lisp.Types.Cell_Ref := Lisp.Store.Cdr (RT.Store, Expr);
+   begin
+      return Lisp.Store.Car (RT.Store, Args_Expr);
+   end If_Form_Cond;
+
+   function If_Form_Then
+     (RT   : State;
+      Expr : Lisp.Types.Cell_Ref) return Lisp.Types.Cell_Ref is
+      Args_Expr : constant Lisp.Types.Cell_Ref := Lisp.Store.Cdr (RT.Store, Expr);
+      Tail_1    : constant Lisp.Types.Cell_Ref := Lisp.Store.Cdr (RT.Store, Args_Expr);
+   begin
+      return Lisp.Store.Car (RT.Store, Tail_1);
+   end If_Form_Then;
+
+   function If_Form_Else
+     (RT   : State;
+      Expr : Lisp.Types.Cell_Ref) return Lisp.Types.Cell_Ref is
+      Args_Expr : constant Lisp.Types.Cell_Ref := Lisp.Store.Cdr (RT.Store, Expr);
+      Tail_1    : constant Lisp.Types.Cell_Ref := Lisp.Store.Cdr (RT.Store, Args_Expr);
+      Tail_2    : constant Lisp.Types.Cell_Ref := Lisp.Store.Cdr (RT.Store, Tail_1);
+   begin
+      return Lisp.Store.Car (RT.Store, Tail_2);
+   end If_Form_Else;
+
+   function Immediate_Result_Form
+     (RT   : State;
+      Expr : Lisp.Types.Cell_Ref) return Boolean is
+      Kind : constant Lisp.Types.Cell_Kind := Lisp.Store.Kind_Of (RT.Store, Expr);
+   begin
+      return Kind = Lisp.Types.Nil_Cell
+        or else Kind = Lisp.Types.True_Cell
+        or else Kind = Lisp.Types.Integer_Cell
+        or else Quote_Form (RT, Expr);
+   end Immediate_Result_Form;
+
+   function Immediate_Result
+     (RT   : State;
+      Expr : Lisp.Types.Cell_Ref) return Lisp.Types.Cell_Ref is
+      Kind : constant Lisp.Types.Cell_Kind := Lisp.Store.Kind_Of (RT.Store, Expr);
+   begin
+      if Kind = Lisp.Types.Nil_Cell
+        or else Kind = Lisp.Types.True_Cell
+        or else Kind = Lisp.Types.Integer_Cell
+      then
+         return Expr;
+      else
+         pragma Assert (Quote_Form (RT, Expr));
+         return Quote_Form_Result (RT, Expr);
+      end if;
+   end Immediate_Result;
+
    function Is_Reserved (RT : State; Name : Lisp.Types.Symbol_Id) return Boolean is
      (Name = RT.Known.Quote_Id
       or else Name = RT.Known.If_Id
