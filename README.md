@@ -1,3 +1,5 @@
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/plops/ada_lisp)
+
 # Ada Lisp v1
 
 This repository implements the bounded Lisp core defined in `docs/semantics.md`.
