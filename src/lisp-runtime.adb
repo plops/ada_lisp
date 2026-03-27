@@ -412,6 +412,55 @@ package body Lisp.Runtime with SPARK_Mode is
       end if;
    end Immediate_Result;
 
+   function Immediate_Form_List
+     (RT    : State;
+      Forms : Lisp.Types.Cell_Ref) return Boolean is
+      Form_Ref : Lisp.Types.Cell_Ref;
+      Tail_Ref : Lisp.Types.Cell_Ref;
+   begin
+      if Forms = Lisp.Store.Nil_Ref then
+         return True;
+      end if;
+
+      if Forms = Lisp.Types.No_Ref
+        or else Lisp.Store.Kind_Of (RT.Store, Forms) /= Lisp.Types.Cons_Cell
+      then
+         return False;
+      end if;
+
+      Form_Ref := Lisp.Store.Car (RT.Store, Forms);
+      Tail_Ref := Lisp.Store.Cdr (RT.Store, Forms);
+      pragma Assert (Form_Ref < Forms);
+      pragma Assert (Tail_Ref < Forms);
+      return Form_Ref /= Lisp.Types.No_Ref
+        and then Tail_Ref /= Lisp.Types.No_Ref
+        and then Immediate_Result_Form (RT, Form_Ref)
+        and then Immediate_Form_List (RT, Tail_Ref);
+   end Immediate_Form_List;
+
+   function Immediate_Form_List_Result
+     (RT    : State;
+      Forms : Lisp.Types.Cell_Ref) return Lisp.Types.Cell_Ref is
+      Form_Ref : Lisp.Types.Cell_Ref;
+      Tail_Ref : Lisp.Types.Cell_Ref;
+   begin
+      if Forms = Lisp.Store.Nil_Ref then
+         return Lisp.Store.Nil_Ref;
+      end if;
+
+      pragma Assert (Forms /= Lisp.Types.No_Ref);
+      pragma Assert (Lisp.Store.Kind_Of (RT.Store, Forms) = Lisp.Types.Cons_Cell);
+      Form_Ref := Lisp.Store.Car (RT.Store, Forms);
+      Tail_Ref := Lisp.Store.Cdr (RT.Store, Forms);
+      pragma Assert (Form_Ref /= Lisp.Types.No_Ref);
+      pragma Assert (Tail_Ref /= Lisp.Types.No_Ref);
+      if Tail_Ref = Lisp.Store.Nil_Ref then
+         return Immediate_Result (RT, Form_Ref);
+      else
+         return Immediate_Form_List_Result (RT, Tail_Ref);
+      end if;
+   end Immediate_Form_List_Result;
+
    function If_Immediate_Result_Form
      (RT   : State;
       Expr : Lisp.Types.Cell_Ref) return Boolean is
@@ -433,7 +482,7 @@ package body Lisp.Runtime with SPARK_Mode is
       end if;
    end If_Immediate_Result;
 
-   function Begin_Single_Immediate_Result_Form
+   function Begin_Immediate_Result_Form
      (RT   : State;
       Expr : Lisp.Types.Cell_Ref) return Boolean is
       Head_Expr : Lisp.Types.Cell_Ref;
@@ -449,17 +498,16 @@ package body Lisp.Runtime with SPARK_Mode is
         and then Args_Expr /= Lisp.Types.No_Ref
         and then Lisp.Store.Kind_Of (RT.Store, Head_Expr) = Lisp.Types.Symbol_Cell
         and then Lisp.Store.Symbol_Value (RT.Store, Head_Expr) = RT.Known.Begin_Id
-        and then Single_Argument_List (RT.Store, Args_Expr)
-        and then Immediate_Result_Form (RT, Lisp.Store.Car (RT.Store, Args_Expr));
-   end Begin_Single_Immediate_Result_Form;
+        and then Immediate_Form_List (RT, Args_Expr);
+   end Begin_Immediate_Result_Form;
 
-   function Begin_Single_Immediate_Result
+   function Begin_Immediate_Result
      (RT   : State;
       Expr : Lisp.Types.Cell_Ref) return Lisp.Types.Cell_Ref is
       Args_Expr : constant Lisp.Types.Cell_Ref := Lisp.Store.Cdr (RT.Store, Expr);
    begin
-      return Immediate_Result (RT, Lisp.Store.Car (RT.Store, Args_Expr));
-   end Begin_Single_Immediate_Result;
+      return Immediate_Form_List_Result (RT, Args_Expr);
+   end Begin_Immediate_Result;
 
    function Is_Reserved (RT : State; Name : Lisp.Types.Symbol_Id) return Boolean is
      (Name = RT.Known.Quote_Id

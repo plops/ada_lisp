@@ -293,6 +293,47 @@ package Lisp.Runtime with SPARK_Mode is
            and then
            Immediate_Result'Result = Lisp.Runtime.Quote_Form_Result (RT, Expr));
 
+   function Immediate_Form_List
+     (RT    : State;
+      Forms : Lisp.Types.Cell_Ref) return Boolean
+   with
+     Pre => Valid (RT)
+       and then (Forms = Lisp.Types.No_Ref or else Lisp.Store.Is_Valid_Ref (RT.Store, Forms)),
+     Post =>
+       (if Immediate_Form_List'Result then
+           (Forms = Lisp.Store.Nil_Ref
+            or else
+              (Forms /= Lisp.Types.No_Ref
+               and then Lisp.Store.Is_Valid_Ref (RT.Store, Forms)
+               and then Lisp.Store.Kind_Of (RT.Store, Forms) = Lisp.Types.Cons_Cell
+               and then Lisp.Store.Car (RT.Store, Forms) /= Lisp.Types.No_Ref
+               and then Lisp.Store.Cdr (RT.Store, Forms) /= Lisp.Types.No_Ref
+               and then Immediate_Result_Form (RT, Lisp.Store.Car (RT.Store, Forms))
+               and then Immediate_Form_List (RT, Lisp.Store.Cdr (RT.Store, Forms))))
+        else
+           True),
+     Subprogram_Variant => (Decreases => Forms);
+
+   function Immediate_Form_List_Result
+     (RT    : State;
+      Forms : Lisp.Types.Cell_Ref) return Lisp.Types.Cell_Ref
+   with
+     Pre => Valid (RT)
+       and then (Forms = Lisp.Store.Nil_Ref or else Lisp.Store.Is_Valid_Ref (RT.Store, Forms))
+       and then Immediate_Form_List (RT, Forms),
+     Post =>
+       Lisp.Store.Is_Valid_Ref (RT.Store, Immediate_Form_List_Result'Result)
+       and then
+       (if Forms = Lisp.Store.Nil_Ref then
+           Immediate_Form_List_Result'Result = Lisp.Store.Nil_Ref
+        elsif Lisp.Store.Cdr (RT.Store, Forms) = Lisp.Store.Nil_Ref then
+           Immediate_Form_List_Result'Result =
+             Immediate_Result (RT, Lisp.Store.Car (RT.Store, Forms))
+        else
+           Immediate_Form_List_Result'Result =
+             Immediate_Form_List_Result (RT, Lisp.Store.Cdr (RT.Store, Forms))),
+     Subprogram_Variant => (Decreases => Forms);
+
    function If_Immediate_Result_Form
      (RT   : State;
       Expr : Lisp.Types.Cell_Ref) return Boolean
@@ -330,14 +371,14 @@ package Lisp.Runtime with SPARK_Mode is
            If_Immediate_Result'Result =
              Immediate_Result (RT, If_Form_Else (RT, Expr)));
 
-   function Begin_Single_Immediate_Result_Form
+   function Begin_Immediate_Result_Form
      (RT   : State;
       Expr : Lisp.Types.Cell_Ref) return Boolean
    with
      Pre => Valid (RT)
        and then Lisp.Store.Is_Valid_Ref (RT.Store, Expr),
      Post =>
-       (if Begin_Single_Immediate_Result_Form'Result
+       (if Begin_Immediate_Result_Form'Result
         then
            Lisp.Store.Kind_Of (RT.Store, Expr) = Lisp.Types.Cons_Cell
            and then Lisp.Store.Car (RT.Store, Expr) /= Lisp.Types.No_Ref
@@ -348,17 +389,44 @@ package Lisp.Runtime with SPARK_Mode is
            and then
            Lisp.Store.Symbol_Value (RT.Store, Lisp.Store.Car (RT.Store, Expr)) =
              RT.Known.Begin_Id
+           and then Immediate_Form_List (RT, Lisp.Store.Cdr (RT.Store, Expr))
+        else
+           True);
+
+   function Begin_Immediate_Result
+     (RT   : State;
+      Expr : Lisp.Types.Cell_Ref) return Lisp.Types.Cell_Ref
+   with
+     Pre => Valid (RT)
+       and then Lisp.Store.Is_Valid_Ref (RT.Store, Expr)
+       and then Begin_Immediate_Result_Form (RT, Expr),
+     Post =>
+       Lisp.Store.Is_Valid_Ref (RT.Store, Begin_Immediate_Result'Result)
+       and then
+       Begin_Immediate_Result'Result =
+         Immediate_Form_List_Result (RT, Lisp.Store.Cdr (RT.Store, Expr));
+
+   function Begin_Single_Immediate_Result_Form
+     (RT   : State;
+      Expr : Lisp.Types.Cell_Ref) return Boolean is
+     (Begin_Immediate_Result_Form (RT, Expr)
+      and then Single_Argument_List (RT.Store, Lisp.Store.Cdr (RT.Store, Expr)))
+   with
+     Pre => Valid (RT)
+       and then Lisp.Store.Is_Valid_Ref (RT.Store, Expr),
+     Post =>
+       (if Begin_Single_Immediate_Result_Form'Result
+        then
+           Begin_Immediate_Result_Form (RT, Expr)
            and then
            Single_Argument_List (RT.Store, Lisp.Store.Cdr (RT.Store, Expr))
-           and then
-           Immediate_Result_Form
-             (RT, Lisp.Store.Car (RT.Store, Lisp.Store.Cdr (RT.Store, Expr)))
         else
            True);
 
    function Begin_Single_Immediate_Result
      (RT   : State;
-      Expr : Lisp.Types.Cell_Ref) return Lisp.Types.Cell_Ref
+      Expr : Lisp.Types.Cell_Ref) return Lisp.Types.Cell_Ref is
+     (Begin_Immediate_Result (RT, Expr))
    with
      Pre => Valid (RT)
        and then Lisp.Store.Is_Valid_Ref (RT.Store, Expr)

@@ -74,6 +74,27 @@ is
      Post =>
        Pure_Data (RT.Store, Lisp.Runtime.Quote_Form_Result (RT, Expr));
 
+   function Pure_Subset_Forms
+     (RT    : Lisp.Runtime.State;
+      Forms : Lisp.Types.Cell_Ref) return Boolean
+   with
+     Pre => Lisp.Runtime.Valid (RT)
+       and then (Forms = Lisp.Types.No_Ref or else Lisp.Store.Is_Valid_Ref (RT.Store, Forms)),
+     Post =>
+       (if Pure_Subset_Forms'Result
+         and then Forms /= Lisp.Store.Nil_Ref
+        then
+           Forms /= Lisp.Types.No_Ref
+           and then Lisp.Store.Is_Valid_Ref (RT.Store, Forms)
+           and then Lisp.Store.Kind_Of (RT.Store, Forms) = Lisp.Types.Cons_Cell
+           and then Lisp.Store.Car (RT.Store, Forms) /= Lisp.Types.No_Ref
+           and then Lisp.Store.Cdr (RT.Store, Forms) /= Lisp.Types.No_Ref
+           and then Pure_Subset_Expr (RT, Lisp.Store.Car (RT.Store, Forms))
+           and then Pure_Subset_Forms (RT, Lisp.Store.Cdr (RT.Store, Forms))
+        else
+           True),
+     Subprogram_Variant => (Decreases => Forms);
+
    function Pure_Subset_Expr
      (RT   : Lisp.Runtime.State;
       Expr : Lisp.Types.Cell_Ref) return Boolean
@@ -98,6 +119,16 @@ is
            Pure_Subset_Expr (RT, Lisp.Runtime.If_Form_Cond (RT, Expr))
            and then Pure_Subset_Expr (RT, Lisp.Runtime.If_Form_Then (RT, Expr))
            and then Pure_Subset_Expr (RT, Lisp.Runtime.If_Form_Else (RT, Expr))
+       else
+           True)
+       and then
+       (if Pure_Subset_Expr'Result
+         and then Expr /= Lisp.Types.No_Ref
+         and then Lisp.Store.Is_Valid_Ref (RT.Store, Expr)
+         and then Lisp.Runtime.Quote_If_Begin_Known (RT)
+         and then Lisp.Runtime.Begin_Immediate_Result_Form (RT, Expr)
+        then
+           Pure_Subset_Forms (RT, Lisp.Store.Cdr (RT.Store, Expr))
        else
            True)
        and then
@@ -223,11 +254,12 @@ is
        and then
        (if Fuel > 2
          and then Lisp.Runtime.Quote_If_Begin_Known (RT)
-         and then Lisp.Runtime.Begin_Single_Immediate_Result_Form (RT, Expr)
-        then
+         and then Lisp.Runtime.Begin_Immediate_Result_Form (RT, Expr)
+       then
            Lisp.Types."=" (Error, Lisp.Types.Error_None)
-           and then Result_Ref = Lisp.Runtime.Begin_Single_Immediate_Result (RT, Expr)
+           and then Result_Ref = Lisp.Runtime.Begin_Immediate_Result (RT, Expr)
         else
            True)
-       ;
+       ,
+     Subprogram_Variant => (Decreases => Fuel, Decreases => Expr);
 end Lisp.Model;
