@@ -66,8 +66,21 @@ package body Lisp.Parser with SPARK_Mode is
    function Store_Refs_Preserved
      (Old_Store : Lisp.Store.Arena;
       New_Store : Lisp.Store.Arena) return Boolean is
-     (for all I in 1 .. Lisp.Store.Cell_Count (Old_Store) =>
-         Lisp.Store.Is_Valid_Ref (New_Store, I));
+     (Lisp.Store.Cell_Count (New_Store) >= Lisp.Store.Cell_Count (Old_Store));
+
+   procedure Prove_Store_Refs_Preserved_Transitive
+     (Base_Store : in Lisp.Store.Arena;
+      Mid_Store  : in Lisp.Store.Arena;
+      New_Store  : in Lisp.Store.Arena)
+   with
+     Ghost,
+     Pre =>
+       Lisp.Store.Valid (Base_Store)
+       and then Lisp.Store.Valid (Mid_Store)
+       and then Lisp.Store.Valid (New_Store)
+       and then Store_Refs_Preserved (Base_Store, Mid_Store)
+       and then Store_Refs_Preserved (Mid_Store, New_Store),
+     Post => Store_Refs_Preserved (Base_Store, New_Store);
 
    procedure Parse_Token_Expr
      (Source : in String;
@@ -134,10 +147,13 @@ package body Lisp.Parser with SPARK_Mode is
          pragma Loop_Invariant (Valid_Result (RT, Result));
          declare
             Current    : constant Positive := Positive (Index);
+            Prev_Store : constant Lisp.Store.Arena := RT.Store;
             New_Result : Lisp.Types.Cell_Ref;
          begin
             Lisp.Store.Make_Cons (RT.Store, Elements (Current), Result, New_Result, Error);
             if Error = Lisp.Types.Error_None then
+               Prove_Store_Refs_Preserved_Transitive (Old_Store, Prev_Store, RT.Store);
+               pragma Assert (Store_Refs_Preserved (Old_Store, RT.Store));
                Result := New_Result;
             end if;
          end;
@@ -174,6 +190,15 @@ package body Lisp.Parser with SPARK_Mode is
       Lisp.Lexer.Next_Token (Source, Pos, Item, Next_Pos);
       pragma Assert (Next_Pos in Item.First .. Source'Last + 1);
    end Scan_Token;
+
+   procedure Prove_Store_Refs_Preserved_Transitive
+     (Base_Store : in Lisp.Store.Arena;
+      Mid_Store  : in Lisp.Store.Arena;
+      New_Store  : in Lisp.Store.Arena) is
+   begin
+      pragma Assert (Lisp.Store.Cell_Count (Base_Store) <= Lisp.Store.Cell_Count (Mid_Store));
+      pragma Assert (Lisp.Store.Cell_Count (Mid_Store) <= Lisp.Store.Cell_Count (New_Store));
+   end Prove_Store_Refs_Preserved_Transitive;
 
    procedure Parse_Atom
      (Source : in String;
@@ -368,6 +393,7 @@ package body Lisp.Parser with SPARK_Mode is
            Ref = Lisp.Types.No_Ref) is
       Quote_Ref : Lisp.Types.Cell_Ref;
       Tail_Ref  : Lisp.Types.Cell_Ref;
+      Old_Store : constant Lisp.Store.Arena := RT.Store;
    begin
       pragma Assert (Lisp.Symbols.Valid (RT.Symbols));
       pragma Assert (Lisp.Store.Valid (RT.Store));
@@ -377,20 +403,46 @@ package body Lisp.Parser with SPARK_Mode is
          Ref := Lisp.Types.No_Ref;
          return;
       end if;
+      pragma Assert (Store_Refs_Preserved (Old_Store, RT.Store));
 
-      Lisp.Store.Make_Symbol (RT.Store, RT.Known.Quote_Id, Quote_Ref, Error);
+      declare
+         Prev_Store : constant Lisp.Store.Arena := RT.Store;
+      begin
+         Lisp.Store.Make_Symbol (RT.Store, RT.Known.Quote_Id, Quote_Ref, Error);
+         if Error = Lisp.Types.Error_None then
+            Prove_Store_Refs_Preserved_Transitive (Old_Store, Prev_Store, RT.Store);
+         end if;
+      end;
       if Error /= Lisp.Types.Error_None then
          Ref := Lisp.Types.No_Ref;
          return;
       end if;
+      pragma Assert (Store_Refs_Preserved (Old_Store, RT.Store));
 
-      Lisp.Store.Make_Cons (RT.Store, Tail_Ref, Lisp.Store.Nil_Ref, Tail_Ref, Error);
+      declare
+         Prev_Store : constant Lisp.Store.Arena := RT.Store;
+      begin
+         Lisp.Store.Make_Cons (RT.Store, Tail_Ref, Lisp.Store.Nil_Ref, Tail_Ref, Error);
+         if Error = Lisp.Types.Error_None then
+            Prove_Store_Refs_Preserved_Transitive (Old_Store, Prev_Store, RT.Store);
+         end if;
+      end;
       if Error /= Lisp.Types.Error_None then
          Ref := Lisp.Types.No_Ref;
          return;
       end if;
+      pragma Assert (Store_Refs_Preserved (Old_Store, RT.Store));
 
-      Lisp.Store.Make_Cons (RT.Store, Quote_Ref, Tail_Ref, Ref, Error);
+      declare
+         Prev_Store : constant Lisp.Store.Arena := RT.Store;
+      begin
+         Lisp.Store.Make_Cons (RT.Store, Quote_Ref, Tail_Ref, Ref, Error);
+         if Error = Lisp.Types.Error_None then
+            Prove_Store_Refs_Preserved_Transitive (Old_Store, Prev_Store, RT.Store);
+         end if;
+      end;
+      pragma Assert
+        (if Error = Lisp.Types.Error_None then Store_Refs_Preserved (Old_Store, RT.Store));
    end Parse_Quoted;
 
    procedure Parse_List
@@ -473,12 +525,20 @@ package body Lisp.Parser with SPARK_Mode is
                   Error := Lisp.Types.Error_Arena_Full;
                   return;
                end if;
-               Parse_List_Element (Source, Tok, RT, Cursor, Elements, Count, Error);
+               declare
+                  Prev_Store : constant Lisp.Store.Arena := RT.Store;
+               begin
+                  Parse_List_Element (Source, Tok, RT, Cursor, Elements, Count, Error);
+                  if Error = Lisp.Types.Error_None then
+                     Prove_Store_Refs_Preserved_Transitive (Old_Store, Prev_Store, RT.Store);
+                  end if;
+               end;
                if Error /= Lisp.Types.Error_None then
                   Ref := Lisp.Types.No_Ref;
                   Next_Pos := Cursor;
                   return;
                end if;
+               pragma Assert (Store_Refs_Preserved (Old_Store, RT.Store));
          end case;
       end loop;
    end Parse_List;

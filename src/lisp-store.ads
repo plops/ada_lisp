@@ -71,6 +71,7 @@ package Lisp.Store with SPARK_Mode is
      Pre  => Valid (S),
      Post =>
        Valid (S)
+       and then Cell_Count (S) >= Cell_Count (S'Old)
        and then (for all I in 1 .. Cell_Count (S'Old) => Is_Valid_Ref (S, I))
        and then
        (if Lisp.Types."=" (Error, Lisp.Types.Error_None) then
@@ -88,6 +89,7 @@ package Lisp.Store with SPARK_Mode is
      Pre  => Valid (S),
      Post =>
        Valid (S)
+       and then Cell_Count (S) >= Cell_Count (S'Old)
        and then (for all I in 1 .. Cell_Count (S'Old) => Is_Valid_Ref (S, I))
        and then
        (if Lisp.Types."=" (Error, Lisp.Types.Error_None) then
@@ -106,6 +108,7 @@ package Lisp.Store with SPARK_Mode is
      Pre  => Valid (S),
      Post =>
        Valid (S)
+       and then Cell_Count (S) >= Cell_Count (S'Old)
        and then (for all I in 1 .. Cell_Count (S'Old) => Is_Valid_Ref (S, I))
        and then
        (if Lisp.Types."=" (Error, Lisp.Types.Error_None) then
@@ -123,6 +126,7 @@ package Lisp.Store with SPARK_Mode is
      Pre  => Valid (S),
      Post =>
        Valid (S)
+       and then Cell_Count (S) >= Cell_Count (S'Old)
        and then (for all I in 1 .. Cell_Count (S'Old) => Is_Valid_Ref (S, I))
        and then
        (if Lisp.Types."=" (Error, Lisp.Types.Error_None) then
@@ -142,6 +146,7 @@ package Lisp.Store with SPARK_Mode is
      Pre  => Valid (S),
      Post =>
        Valid (S)
+       and then Cell_Count (S) >= Cell_Count (S'Old)
        and then (for all I in 1 .. Cell_Count (S'Old) => Is_Valid_Ref (S, I))
        and then
        (if Lisp.Types."=" (Error, Lisp.Types.Error_None) then
