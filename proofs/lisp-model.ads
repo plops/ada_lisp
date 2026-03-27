@@ -88,6 +88,17 @@ is
         then
            Pure_Data (RT.Store, Lisp.Runtime.Quote_Form_Result (RT, Expr))
         else
+           True)
+       and then
+       (if Pure_Subset_Expr'Result
+         and then Expr /= Lisp.Types.No_Ref
+         and then Lisp.Store.Is_Valid_Ref (RT.Store, Expr)
+         and then Lisp.Runtime.If_Form (RT, Expr)
+        then
+           Pure_Subset_Expr (RT, Lisp.Runtime.If_Form_Cond (RT, Expr))
+           and then Pure_Subset_Expr (RT, Lisp.Runtime.If_Form_Then (RT, Expr))
+           and then Pure_Subset_Expr (RT, Lisp.Runtime.If_Form_Else (RT, Expr))
+        else
            True),
      Subprogram_Variant => (Decreases => Expr);
 

@@ -159,7 +159,12 @@ package Lisp.Runtime with SPARK_Mode is
      Pre => Valid (RT)
        and then Lisp.Store.Is_Valid_Ref (RT.Store, Expr)
        and then If_Form (RT, Expr),
-     Post => Lisp.Store.Is_Valid_Ref (RT.Store, If_Form_Cond'Result);
+     Post =>
+       Lisp.Store.Is_Valid_Ref (RT.Store, If_Form_Cond'Result)
+       and then If_Form_Cond'Result < Expr
+       and then
+       If_Form_Cond'Result =
+         Lisp.Store.Car (RT.Store, Lisp.Store.Cdr (RT.Store, Expr));
 
    function If_Form_Then
      (RT   : State;
@@ -168,7 +173,14 @@ package Lisp.Runtime with SPARK_Mode is
      Pre => Valid (RT)
        and then Lisp.Store.Is_Valid_Ref (RT.Store, Expr)
        and then If_Form (RT, Expr),
-     Post => Lisp.Store.Is_Valid_Ref (RT.Store, If_Form_Then'Result);
+     Post =>
+       Lisp.Store.Is_Valid_Ref (RT.Store, If_Form_Then'Result)
+       and then If_Form_Then'Result < Expr
+       and then
+       If_Form_Then'Result =
+         Lisp.Store.Car
+           (RT.Store,
+            Lisp.Store.Cdr (RT.Store, Lisp.Store.Cdr (RT.Store, Expr)));
 
    function If_Form_Else
      (RT   : State;
@@ -177,7 +189,16 @@ package Lisp.Runtime with SPARK_Mode is
      Pre => Valid (RT)
        and then Lisp.Store.Is_Valid_Ref (RT.Store, Expr)
        and then If_Form (RT, Expr),
-     Post => Lisp.Store.Is_Valid_Ref (RT.Store, If_Form_Else'Result);
+     Post =>
+       Lisp.Store.Is_Valid_Ref (RT.Store, If_Form_Else'Result)
+       and then If_Form_Else'Result < Expr
+       and then
+       If_Form_Else'Result =
+         Lisp.Store.Car
+           (RT.Store,
+            Lisp.Store.Cdr
+              (RT.Store,
+               Lisp.Store.Cdr (RT.Store, Lisp.Store.Cdr (RT.Store, Expr))));
 
    function Immediate_Result_Form
      (RT   : State;
