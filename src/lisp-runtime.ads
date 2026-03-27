@@ -6,6 +6,9 @@ with Lisp.Types;
 package Lisp.Runtime with SPARK_Mode is
    use type Lisp.Types.Cell_Kind;
 
+   Quote_Name : constant String := "quote";
+   If_Name    : constant String := "if";
+
    type Well_Known_Symbols is record
       Quote_Id  : Lisp.Types.Symbol_Id := 0;
       If_Id     : Lisp.Types.Symbol_Id := 0;
@@ -32,19 +35,45 @@ package Lisp.Runtime with SPARK_Mode is
       Known   : Well_Known_Symbols;
    end record;
 
+   function Valid (RT : State) return Boolean is
+     (Lisp.Symbols.Valid (RT.Symbols)
+      and then Lisp.Store.Valid (RT.Store)
+      and then Lisp.Env.Valid (RT.Env));
+
+   function Quote_If_Known (RT : State) return Boolean is
+     (Lisp.Symbols.Equal_Slice
+        (RT.Symbols,
+         RT.Known.Quote_Id,
+         Quote_Name,
+         Quote_Name'First,
+         Quote_Name'Last)
+      and then
+      Lisp.Symbols.Equal_Slice
+        (RT.Symbols,
+         RT.Known.If_Id,
+         If_Name,
+         If_Name'First,
+         If_Name'Last))
+   with
+     Pre => Valid (RT);
+
+   procedure Prove_Quote_If_Known_Distinct (RT : in State)
+   with
+     Ghost,
+     Pre => Valid (RT)
+       and then Quote_If_Known (RT),
+     Post => RT.Known.Quote_Id /= RT.Known.If_Id;
+
    procedure Initialize (RT : in out State; Error : out Lisp.Types.Error_Code)
    with
      Post => Valid (RT)
        and then
        (if Lisp.Types."=" (Error, Lisp.Types.Error_None) then
+           Quote_If_Known (RT)
+           and then
            RT.Known.Quote_Id /= RT.Known.If_Id
         else
            True);
-
-   function Valid (RT : State) return Boolean is
-     (Lisp.Symbols.Valid (RT.Symbols)
-      and then Lisp.Store.Valid (RT.Store)
-      and then Lisp.Env.Valid (RT.Env));
 
    function Single_Argument_List
      (S    : Lisp.Store.Arena;

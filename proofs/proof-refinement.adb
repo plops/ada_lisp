@@ -68,7 +68,7 @@ procedure Proof.Refinement with SPARK_Mode is
        and then Lisp.Env.Frame_Valid (Initial_RT.Env, Lisp.Env.Global_Frame)
        and then Lisp.Store.Is_Valid_Ref (Initial_RT.Store, Expr)
        and then Lisp.Model.Pure_Subset_Expr (Initial_RT, Expr)
-       and then Initial_RT.Known.If_Id /= Initial_RT.Known.Quote_Id
+       and then Lisp.Runtime.Quote_If_Known (Initial_RT)
        and then Lisp.Runtime.If_Immediate_Result_Form (Initial_RT, Expr)
    is
       Model_RT     : Lisp.Runtime.State := Initial_RT;
@@ -155,7 +155,7 @@ procedure Proof.Refinement with SPARK_Mode is
          return;
       end if;
 
-      pragma Assert (Initial_RT.Known.If_Id /= Initial_RT.Known.Quote_Id);
+      pragma Assert (Lisp.Runtime.Quote_If_Known (Initial_RT));
 
       if Lisp.Runtime.If_Immediate_Result_Form (Initial_RT, Initial_Expr) then
          Prove_If_Immediate_Form_Refines (Initial_RT, Initial_Expr);

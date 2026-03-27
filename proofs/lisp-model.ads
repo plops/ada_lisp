@@ -202,7 +202,7 @@ is
            True)
        and then
        (if Fuel > 1
-         and then RT.Known.If_Id /= RT.Known.Quote_Id
+         and then Lisp.Runtime.Quote_If_Known (RT)
          and then Lisp.Runtime.If_Immediate_Result_Form (RT, Expr)
         then
            Lisp.Types."=" (Error, Lisp.Types.Error_None)

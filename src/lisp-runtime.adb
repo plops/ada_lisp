@@ -51,9 +51,23 @@ package body Lisp.Runtime with SPARK_Mode is
       Lisp.Symbols.Intern (RT.Symbols, Name, First, Last, Name_Id, Error);
    end Intern_Known;
 
+   procedure Prove_Quote_If_Known_Distinct (RT : in State) is
+   begin
+      pragma Assert
+        (Lisp.Symbols.Length_Of (RT.Symbols, RT.Known.Quote_Id) =
+         Quote_Name'Length);
+      pragma Assert
+        (Lisp.Symbols.Length_Of (RT.Symbols, RT.Known.If_Id) =
+         If_Name'Length);
+      Lisp.Symbols.Prove_Different_Length_Ids_Distinct
+        (RT.Symbols,
+         RT.Known.Quote_Id,
+         Quote_Name'Length,
+         RT.Known.If_Id,
+         If_Name'Length);
+   end Prove_Quote_If_Known_Distinct;
+
    procedure Initialize (RT : in out State; Error : out Lisp.Types.Error_Code) is
-      Quote_Name  : constant String := "quote";
-      If_Name     : constant String := "if";
       Name_Id     : Lisp.Types.Symbol_Id;
       Quote_Id    : Lisp.Types.Symbol_Id;
       If_Id       : Lisp.Types.Symbol_Id;
@@ -67,10 +81,10 @@ package body Lisp.Runtime with SPARK_Mode is
       pragma Assert (Lisp.Store.Valid (RT.Store));
       pragma Assert (Lisp.Env.Valid (RT.Env));
 
-      Intern_Known (RT, "quote", 1, 5, Name_Id, Error);
+      Intern_Known (RT, Quote_Name, Quote_Name'First, Quote_Name'Last, Name_Id, Error);
       if Error /= Lisp.Types.Error_None then return; end if;
       RT.Known.Quote_Id := Name_Id;
-      Intern_Known (RT, "if", 1, 2, Name_Id, Error);
+      Intern_Known (RT, If_Name, If_Name'First, If_Name'Last, Name_Id, Error);
       if Error /= Lisp.Types.Error_None then return; end if;
       RT.Known.If_Id := Name_Id;
       Intern_Known (RT, "lambda", 1, 6, Name_Id, Error);
@@ -176,6 +190,7 @@ package body Lisp.Runtime with SPARK_Mode is
       end;
       RT.Known.Quote_Id := Quote_Id;
       RT.Known.If_Id := If_Id;
+      pragma Assert (Quote_If_Known (RT));
       pragma Assert (RT.Known.Quote_Id /= RT.Known.If_Id);
 
       pragma Assert (Lisp.Symbols.Valid (RT.Symbols));

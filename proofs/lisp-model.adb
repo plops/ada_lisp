@@ -426,7 +426,7 @@ is
                   Condition_Result,
                   Condition_Error);
                if Fuel > 1
-                 and then RT.Known.If_Id /= RT.Known.Quote_Id
+                 and then Lisp.Runtime.Quote_If_Known (RT)
                  and then Lisp.Runtime.If_Immediate_Result_Form (RT, Expr)
                then
                   pragma Assert (Condition_Error = Lisp.Types.Error_None);
@@ -447,7 +447,9 @@ is
                   Result_Ref := Lisp.Types.No_Ref;
                   Error := Condition_Error;
                   pragma Assert
-                    (Fuel <= 1 or else not Lisp.Runtime.If_Immediate_Result_Form (RT, Expr));
+                    (Fuel <= 1
+                     or else not Lisp.Runtime.Quote_If_Known (RT)
+                     or else not Lisp.Runtime.If_Immediate_Result_Form (RT, Expr));
                   return;
                end if;
                if Is_Truth (Condition_Result) then
@@ -459,7 +461,7 @@ is
                      Result_Ref,
                      Error);
                   if Fuel > 1
-                    and then RT.Known.If_Id /= RT.Known.Quote_Id
+                    and then Lisp.Runtime.Quote_If_Known (RT)
                     and then Lisp.Runtime.If_Immediate_Result_Form (RT, Expr)
                   then
                      pragma Assert
@@ -490,7 +492,7 @@ is
                      Result_Ref,
                      Error);
                   if Fuel > 1
-                    and then RT.Known.If_Id /= RT.Known.Quote_Id
+                    and then Lisp.Runtime.Quote_If_Known (RT)
                     and then Lisp.Runtime.If_Immediate_Result_Form (RT, Expr)
                   then
                      pragma Assert
@@ -514,7 +516,7 @@ is
                   end if;
                end if;
                if Fuel > 1
-                 and then RT.Known.If_Id /= RT.Known.Quote_Id
+                 and then Lisp.Runtime.Quote_If_Known (RT)
                  and then Lisp.Runtime.If_Immediate_Result_Form (RT, Expr)
                then
                   pragma Assert (Error = Lisp.Types.Error_None);
