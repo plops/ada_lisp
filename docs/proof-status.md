@@ -6,7 +6,7 @@
 - `Lisp.Text_Buffers`: intended state and append proof, current status core proof project clean
 - `Lisp.Symbols`: intended table validity proof, current status core proof project clean after slice-bound contract cleanup
 - `Lisp.Store`: intended arena validity proof, current status core proof project clean after readability helper cleanup
-- `Lisp.Env`: intended frame validity proof, current status core proof project clean for the dedicated proof gate
+- `Lisp.Env`: intended frame validity proof, current status core proof project clean after restoring solver-friendly frame-preservation lemmas and closing the remaining bounded gate obligations
 - `Lisp.Runtime`: intended bootstrap validity proof, current status core proof project clean
 - `Lisp.Lexer`: intended token progress proof, current status core proof project clean after position/bounds invariants
 - `Lisp.Parser`: intended runtime preservation proof, current status core proof project clean
@@ -20,9 +20,9 @@
 
 Latest dedicated core-proof summary from `./scripts/prove-adacore.sh`:
 
-- status note: focused semantic proof units remain clean on March 27, 2026 at `GNATPROVE_LEVEL=0` and `GNATPROVE_TIMEOUT=1`, but a fresh full bounded `./scripts/prove-adacore.sh` clean rebuild now reports additional medium messages in `lisp-primitives.ads`, `lisp-parser.adb`, `lisp-env.adb`, and `lisp-eval.ads`, so the repo-wide “full gate clean” claim should be treated as stale pending that broader cleanup
-- warnings note: the focused semantic lane still only carries the expected non-failing warning about the currently unreferenced `Readable_Result_Refines_Model` scaffold procedure in `proof-refinement.adb`
-- notes: parser contract cleanup now carries token cursor bounds, store-ref preservation, and environment validity through nested parse helpers, and the runtime/test scaffolding is aligned to the current `Max_Fuel` budget; use focused `./scripts/prove.sh -u ...` runs for local iteration, then widen back out to `./scripts/prove-adacore.sh`
+- status note: a fresh full bounded `./scripts/prove-adacore.sh` run completed clean on March 27, 2026 with the script defaults, and the remaining proof-sensitive units are also clean under their focused lanes; `Lisp.Env` now closes in the full gate after restoring explicit frame-preservation and copied-name uniqueness lemmas
+- warnings note: the current non-failing warnings are the expected unreferenced scaffold procedure in `proof-refinement.adb`, the unused initial values in `lisp-symbols.ads` and `lisp-env.ads`, the initialization-has-no-effect warnings in `lisp-primitives.adb`, and the local cursor initialization warning in `lisp-parser.adb`
+- notes: focused semantic proof units remain clean on March 27, 2026 at `GNATPROVE_LEVEL=0` and `GNATPROVE_TIMEOUT=1`; the env uniqueness obligations also close with a stronger focused budget at `GNATPROVE_JOBS=32 GNATPROVE_LEVEL=0 GNATPROVE_TIMEOUT=2 GNATPROVE_PROVER=all ./scripts/prove-adacore.sh -u lisp-env.adb`, and `./scripts/with-adacore.sh ./scripts/test.sh` passes against the current tree
 
 Project split:
 
