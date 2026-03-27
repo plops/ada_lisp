@@ -223,7 +223,18 @@ package Lisp.Runtime with SPARK_Mode is
      Pre => Valid (RT)
        and then Lisp.Store.Is_Valid_Ref (RT.Store, Expr)
        and then Immediate_Result_Form (RT, Expr),
-     Post => Lisp.Store.Is_Valid_Ref (RT.Store, Immediate_Result'Result);
+     Post =>
+       Lisp.Store.Is_Valid_Ref (RT.Store, Immediate_Result'Result)
+       and then
+       (if Lisp.Store.Kind_Of (RT.Store, Expr) = Lisp.Types.Nil_Cell
+          or else Lisp.Store.Kind_Of (RT.Store, Expr) = Lisp.Types.True_Cell
+          or else Lisp.Store.Kind_Of (RT.Store, Expr) = Lisp.Types.Integer_Cell
+        then
+           Immediate_Result'Result = Expr
+        else
+           Lisp.Runtime.Quote_Form (RT, Expr)
+           and then
+           Immediate_Result'Result = Lisp.Runtime.Quote_Form_Result (RT, Expr));
 
    function Is_Reserved (RT : State; Name : Lisp.Types.Symbol_Id) return Boolean;
 end Lisp.Runtime;

@@ -48,18 +48,12 @@ procedure Proof.Refinement with SPARK_Mode is
       pragma Assert (Model_Error = Lisp.Types.Error_None);
       pragma Assert (Exec_Error = Lisp.Types.Error_None);
 
-      case Lisp.Store.Kind_Of (Initial_RT.Store, Expr) is
-         when Lisp.Types.Nil_Cell
-            | Lisp.Types.True_Cell
-            | Lisp.Types.Integer_Cell =>
-            pragma Assert (Model_Result = Expr);
-            pragma Assert (Exec_Result = Expr);
-         when others =>
-            pragma Assert (Lisp.Runtime.Quote_Form (Initial_RT, Expr));
-            Lisp.Model.Prove_Pure_Subset_Quote_Result (Initial_RT, Expr);
-            pragma Assert (Model_Result = Lisp.Runtime.Quote_Form_Result (Initial_RT, Expr));
-            pragma Assert (Exec_Result = Lisp.Runtime.Quote_Form_Result (Initial_RT, Expr));
-      end case;
+      if Lisp.Runtime.Quote_Form (Initial_RT, Expr) then
+         Lisp.Model.Prove_Pure_Subset_Quote_Result (Initial_RT, Expr);
+      end if;
+
+      pragma Assert (Model_Result = Lisp.Runtime.Immediate_Result (Initial_RT, Expr));
+      pragma Assert (Exec_Result = Lisp.Runtime.Immediate_Result (Initial_RT, Expr));
 
       pragma Assert (Model_Result = Exec_Result);
    end Prove_Immediate_Form_Refines;
