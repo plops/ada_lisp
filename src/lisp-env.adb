@@ -392,6 +392,11 @@ package body Lisp.Env with SPARK_Mode is
         ((for all J in 2 .. Positive (Frame) - 1 => Frame_Parent_Valid (Env_State, J)));
       pragma Assert
         ((for all J in 2 .. Positive (Frame) - 1 => Frame_Names_Unique (Env_State.Frames (J))));
+      pragma Assert (Env_State.Frames (1) = Old_State.Frames (1));
+      pragma Assert (Frame_Names_Unique (Env_State.Frames (1)));
+      pragma Assert
+        ((for all J in 1 .. Positive (Frame) =>
+            Frame_Names_Unique (Env_State.Frames (J))));
       pragma Assert (Valid (Env_State));
       Error := Lisp.Types.Error_None;
    end Push_Frame;

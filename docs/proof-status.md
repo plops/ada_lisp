@@ -5,12 +5,12 @@
 - `Lisp.Arith`: intended overflow and contract proof, current status core proof project clean
 - `Lisp.Text_Buffers`: intended state and append proof, current status core proof project clean
 - `Lisp.Symbols`: intended table validity proof, current status core proof project clean after slice-bound contract cleanup
-- `Lisp.Store`: intended arena validity proof, current status proof cleanup in progress; remaining obligations are concentrated in recursive readability/list helpers and mutator postconditions
+- `Lisp.Store`: intended arena validity proof, current status core proof project clean after readability helper cleanup
 - `Lisp.Env`: intended frame validity proof, current status core proof project clean for the dedicated proof gate
 - `Lisp.Runtime`: intended bootstrap validity proof, current status core proof project clean
 - `Lisp.Lexer`: intended token progress proof, current status core proof project clean after position/bounds invariants
 - `Lisp.Parser`: intended runtime preservation proof, current status core proof project clean
-- `Lisp.Printer`: intended canonical output proof, current status partially cleaned; remaining obligations depend on `Lisp.Store` child-ref propagation
+- `Lisp.Printer`: intended canonical output proof, current status core proof project clean
 - `Lisp.Primitives`: intended contract and safety proof, current status core proof project clean
 - `Lisp.Eval`: intended fuel and contract proof, current status core proof project clean
 - `Lisp.Driver`: intended end-to-end SPARK proof, current status core proof project clean
@@ -20,8 +20,8 @@
 
 Latest dedicated core-proof summary from `gnatprove -P lisp_prove.gpr`:
 
-- status note: this summary is currently stale while the store/printer proof refactor is in progress
-- notes: use focused `./scripts/prove.sh -u ...` runs at `GNATPROVE_LEVEL=0` / `GNATPROVE_TIMEOUT=1` during contract iteration, then widen back out once the store recursion obligations are closed
+- status note: clean at `GNATPROVE_LEVEL=0`, `GNATPROVE_TIMEOUT=2`, `GNATPROVE_PROVER=all`, `GNATPROVE_JOBS=32` with the repo-local AdaCore toolchain on March 27, 2026
+- notes: parser contract cleanup now carries token cursor bounds, store-ref preservation, and environment validity through nested parse helpers, and the runtime/test scaffolding is aligned to the current `Max_Fuel` budget; use focused `./scripts/prove.sh -u ...` runs for local iteration, then widen back out to `./scripts/prove-adacore.sh`
 
 Project split:
 

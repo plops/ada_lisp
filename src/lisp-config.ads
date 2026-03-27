@@ -6,7 +6,7 @@ package Lisp.Config with SPARK_Mode is
    Max_Frame_Bindings : constant := 32;
    Max_List_Elements  : constant := 128;
    Max_Output_Length  : constant := 4096;
-   Max_Fuel           : constant := 4096;
+   Max_Fuel           : constant := 32;
    Min_Int            : constant := -1_000_000_000;
    Max_Int            : constant :=  1_000_000_000;
 end Lisp.Config;

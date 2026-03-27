@@ -1,3 +1,4 @@
+with Lisp.Config;
 with Lisp.Env;
 with Lisp.Eval;
 with Lisp.Model;
@@ -55,9 +56,19 @@ procedure Proof.Refinement with SPARK_Mode is
       end if;
 
       Lisp.Model.Eval_Pure_Closed
-        (Model_RT, Lisp.Env.Global_Frame, Model_Expr, 64, Model_Result, Model_Error);
+        (Model_RT,
+         Lisp.Env.Global_Frame,
+         Model_Expr,
+         Lisp.Config.Max_Fuel,
+         Model_Result,
+         Model_Error);
       Lisp.Eval.Eval
-        (Exec_RT, Lisp.Env.Global_Frame, Exec_Expr, 64, Exec_Result, Exec_Error);
+        (Exec_RT,
+         Lisp.Env.Global_Frame,
+         Exec_Expr,
+         Lisp.Config.Max_Fuel,
+         Exec_Result,
+         Exec_Error);
 
       if Model_Error = Exec_Error
         and then Exec_Error = Lisp.Types.Error_None

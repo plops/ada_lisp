@@ -317,13 +317,8 @@ package body Lisp.Store with SPARK_Mode is
          when Lisp.Types.Nil_Cell | Lisp.Types.True_Cell | Lisp.Types.Integer_Cell | Lisp.Types.Symbol_Cell =>
             return True;
          when Lisp.Types.Cons_Cell =>
-            pragma Assert (Cell_Refs_Below (S, Positive (Ref)));
-            Left_Ref := S.Cells (Positive (Ref)).Left_Value;
-            Right_Ref := S.Cells (Positive (Ref)).Right_Value;
-            pragma Assert (Left_Ref < Ref);
-            pragma Assert (Right_Ref < Ref);
-            pragma Assert (Left_Ref = Lisp.Types.No_Ref or else Is_Valid_Ref (S, Left_Ref));
-            pragma Assert (Right_Ref = Lisp.Types.No_Ref or else Is_Valid_Ref (S, Right_Ref));
+            Left_Ref := Car (S, Ref);
+            Right_Ref := Cdr (S, Ref);
             return Readable_Value (S, Left_Ref) and Readable_Value (S, Right_Ref);
          when Lisp.Types.Primitive_Cell | Lisp.Types.Closure_Cell =>
             return False;

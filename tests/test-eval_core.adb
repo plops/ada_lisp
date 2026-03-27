@@ -1,5 +1,6 @@
 with Lisp.Eval;
 with Lisp.Parser;
+with Lisp.Config;
 with Lisp.Runtime;
 with Lisp.Types;
 
@@ -15,6 +16,6 @@ begin
    pragma Assert (Error = Lisp.Types.Error_None);
    Lisp.Parser.Parse_One ("(+ 1 2)", 1, RT, Expr, Next_Pos, Error);
    pragma Assert (Error = Lisp.Types.Error_None);
-   Lisp.Eval.Eval (RT, 1, Expr, 100, Result, Error);
+   Lisp.Eval.Eval (RT, 1, Expr, Lisp.Config.Max_Fuel, Result, Error);
    pragma Assert (Error = Lisp.Types.Error_None);
 end Test.Eval_Core;

@@ -13,6 +13,10 @@ package body Lisp.Parser with SPARK_Mode is
    type Element_Buffer is
      array (Positive range 1 .. Lisp.Config.Max_List_Elements) of Lisp.Types.Cell_Ref;
 
+   function Store_Refs_Preserved
+     (Old_Store : Lisp.Store.Arena;
+      New_Store : Lisp.Store.Arena) return Boolean;
+
    procedure Parse_Expr
      (Source   : in String;
       Pos      : in Positive;
@@ -23,12 +27,15 @@ package body Lisp.Parser with SPARK_Mode is
    with
      Pre => Lisp.Symbols.Valid (RT.Symbols)
        and then Lisp.Store.Valid (RT.Store)
+       and then Lisp.Env.Valid (RT.Env)
        and then Source'First = 1
        and then Pos in Source'Range
        and then Source'Last < Natural'Last,
      Post => Next_Pos in Pos .. Source'Last + 1
        and then Lisp.Symbols.Valid (RT.Symbols)
        and then Lisp.Store.Valid (RT.Store)
+       and then Lisp.Env.Valid (RT.Env)
+       and then Store_Refs_Preserved (RT.Store'Old, RT.Store)
        and then
        (if Lisp.Types."=" (Error, Lisp.Types.Error_None) then
            Lisp.Store.Is_Valid_Ref (RT.Store, Ref)
@@ -56,6 +63,12 @@ package body Lisp.Parser with SPARK_Mode is
       Result : Lisp.Types.Cell_Ref) return Boolean is
      (Result = Lisp.Store.Nil_Ref or else Lisp.Store.Is_Valid_Ref (RT.Store, Result));
 
+   function Store_Refs_Preserved
+     (Old_Store : Lisp.Store.Arena;
+      New_Store : Lisp.Store.Arena) return Boolean is
+     (for all I in 1 .. Lisp.Store.Cell_Count (Old_Store) =>
+         Lisp.Store.Is_Valid_Ref (New_Store, I));
+
    procedure Parse_Token_Expr
      (Source : in String;
       Tok    : in Lisp.Lexer.Token;
@@ -66,6 +79,7 @@ package body Lisp.Parser with SPARK_Mode is
    with
      Pre => Lisp.Symbols.Valid (RT.Symbols)
        and then Lisp.Store.Valid (RT.Store)
+       and then Lisp.Env.Valid (RT.Env)
        and then Source'First = 1
        and then Source'Last < Natural'Last
        and then Tok.First > 0
@@ -75,6 +89,8 @@ package body Lisp.Parser with SPARK_Mode is
      Post => Cursor in Tok.First .. Source'Last + 1
        and then Lisp.Symbols.Valid (RT.Symbols)
        and then Lisp.Store.Valid (RT.Store)
+       and then Lisp.Env.Valid (RT.Env)
+       and then Store_Refs_Preserved (RT.Store'Old, RT.Store)
        and then
        (if Lisp.Types."=" (Error, Lisp.Types.Error_None) then
            Lisp.Store.Is_Valid_Ref (RT.Store, Ref)
@@ -90,9 +106,12 @@ package body Lisp.Parser with SPARK_Mode is
       Error      : out Lisp.Types.Error_Code)
    with
      Pre  => Lisp.Store.Valid (RT.Store)
+       and then Lisp.Env.Valid (RT.Env)
        and then Element_Prefix_Valid (RT, Elements, Elem_Count)
        and then Valid_Result (RT, Tail),
      Post => Lisp.Store.Valid (RT.Store)
+       and then Lisp.Env.Valid (RT.Env)
+       and then Store_Refs_Preserved (RT.Store'Old, RT.Store)
        and then
        (if Lisp.Types."=" (Error, Lisp.Types.Error_None) then
            Lisp.Store.Is_Valid_Ref (RT.Store, Ref)
@@ -100,10 +119,14 @@ package body Lisp.Parser with SPARK_Mode is
            Ref = Lisp.Types.No_Ref) is
       Result : Lisp.Types.Cell_Ref := Tail;
       Index  : List_Element_Count := Elem_Count;
+      Old_Store : constant Lisp.Store.Arena := RT.Store;
    begin
       pragma Assert (Lisp.Store.Valid (RT.Store));
+      pragma Assert (Lisp.Env.Valid (RT.Env));
       while Index > 0 loop
          pragma Loop_Invariant (Lisp.Store.Valid (RT.Store));
+         pragma Loop_Invariant (Lisp.Env.Valid (RT.Env));
+         pragma Loop_Invariant (Store_Refs_Preserved (Old_Store, RT.Store));
          pragma Loop_Invariant (Index <= Elem_Count);
          pragma Loop_Invariant (Element_Prefix_Valid (RT, Elements, Elem_Count));
          pragma Loop_Invariant
@@ -139,7 +162,9 @@ package body Lisp.Parser with SPARK_Mode is
        and then Pos in Source'Range
        and then Source'Last < Natural'Last,
      Post => Next_Pos in Pos .. Source'Last + 1
+       and then Next_Pos in Item.First .. Source'Last + 1
        and then Item.First > 0
+       and then Item.First in Pos .. Source'Last + 1
        and then Item.Last in Item.First .. Source'Last + 1
        and then
        (if Item.Kind /= Lisp.Lexer.Tok_EOF then
@@ -147,10 +172,7 @@ package body Lisp.Parser with SPARK_Mode is
            and then Item.Last in Item.First .. Source'Last) is
    begin
       Lisp.Lexer.Next_Token (Source, Pos, Item, Next_Pos);
-      pragma Assert
-        (if Item.Kind /= Lisp.Lexer.Tok_EOF then
-            Item.First in Pos .. Source'Last
-            and then Item.Last in Item.First .. Source'Last);
+      pragma Assert (Next_Pos in Item.First .. Source'Last + 1);
    end Scan_Token;
 
    procedure Parse_Atom
@@ -162,6 +184,7 @@ package body Lisp.Parser with SPARK_Mode is
    with
      Pre => Lisp.Symbols.Valid (RT.Symbols)
        and then Lisp.Store.Valid (RT.Store)
+       and then Lisp.Env.Valid (RT.Env)
        and then Source'First = 1
        and then Tok.First in Source'Range
        and then (Tok.Kind = Lisp.Lexer.Tok_Integer
@@ -174,6 +197,8 @@ package body Lisp.Parser with SPARK_Mode is
            and then Tok.Last in Tok.First .. Source'Last),
      Post => Lisp.Symbols.Valid (RT.Symbols)
        and then Lisp.Store.Valid (RT.Store)
+       and then Lisp.Env.Valid (RT.Env)
+       and then Store_Refs_Preserved (RT.Store'Old, RT.Store)
        and then
        (if Lisp.Types."=" (Error, Lisp.Types.Error_None) then
            Lisp.Store.Is_Valid_Ref (RT.Store, Ref)
@@ -183,6 +208,7 @@ package body Lisp.Parser with SPARK_Mode is
    begin
       pragma Assert (Lisp.Symbols.Valid (RT.Symbols));
       pragma Assert (Lisp.Store.Valid (RT.Store));
+      pragma Assert (Lisp.Env.Valid (RT.Env));
       case Tok.Kind is
          when Lisp.Lexer.Tok_Integer =>
             Lisp.Store.Make_Integer (RT.Store, Tok.Int_Value, Ref, Error);
@@ -216,28 +242,37 @@ package body Lisp.Parser with SPARK_Mode is
    with
      Pre => Lisp.Symbols.Valid (RT.Symbols)
        and then Lisp.Store.Valid (RT.Store)
+       and then Lisp.Env.Valid (RT.Env)
        and then Source'First = 1
        and then Source'Last < Natural'Last
        and then Tok.First in Source'Range
+       and then Tok.Last in Tok.First .. Source'Last
        and then Cursor in Tok.First .. Source'Last + 1
        and then Count < Lisp.Config.Max_List_Elements
        and then Element_Prefix_Valid (RT, Elements, Count),
      Post => Lisp.Symbols.Valid (RT.Symbols)
        and then Lisp.Store.Valid (RT.Store)
+       and then Lisp.Env.Valid (RT.Env)
+       and then Store_Refs_Preserved (RT.Store'Old, RT.Store)
        and then Element_Prefix_Valid (RT, Elements, Count)
        and then Cursor in Tok.First .. Source'Last + 1 is
-      Elem_Ref : Lisp.Types.Cell_Ref;
+      Elem_Ref  : Lisp.Types.Cell_Ref;
+      Old_Count : constant List_Element_Count := Count;
+      Old_Store : constant Lisp.Store.Arena := RT.Store;
    begin
       pragma Assert (Lisp.Symbols.Valid (RT.Symbols));
       pragma Assert (Lisp.Store.Valid (RT.Store));
+      pragma Assert (Lisp.Env.Valid (RT.Env));
       Parse_Token_Expr (Source, Tok, Cursor, RT, Elem_Ref, Error);
       if Error /= Lisp.Types.Error_None then
          return;
       end if;
 
+      pragma Assert (Store_Refs_Preserved (Old_Store, RT.Store));
+      pragma Assert (Element_Prefix_Valid (RT, Elements, Old_Count));
       pragma Assert (Lisp.Store.Is_Valid_Ref (RT.Store, Elem_Ref));
       pragma Assert (Count < List_Element_Count'Last);
-      Count := Count + 1;
+      Count := Old_Count + 1;
       Elements (Count) := Elem_Ref;
       pragma Assert (Element_Prefix_Valid (RT, Elements, Count));
    end Parse_List_Element;
@@ -254,6 +289,7 @@ package body Lisp.Parser with SPARK_Mode is
    with
      Pre => Lisp.Symbols.Valid (RT.Symbols)
        and then Lisp.Store.Valid (RT.Store)
+       and then Lisp.Env.Valid (RT.Env)
        and then Source'First = 1
        and then Source'Last < Natural'Last
        and then Cursor in Source'Range
@@ -262,6 +298,8 @@ package body Lisp.Parser with SPARK_Mode is
      Post => Next_Pos in Cursor .. Source'Last + 1
        and then Lisp.Symbols.Valid (RT.Symbols)
        and then Lisp.Store.Valid (RT.Store)
+       and then Lisp.Env.Valid (RT.Env)
+       and then Store_Refs_Preserved (RT.Store'Old, RT.Store)
        and then
        (if Lisp.Types."=" (Error, Lisp.Types.Error_None) then
            Lisp.Store.Is_Valid_Ref (RT.Store, Ref)
@@ -270,9 +308,11 @@ package body Lisp.Parser with SPARK_Mode is
       Tail      : Lisp.Types.Cell_Ref;
       Close_Tok : Lisp.Lexer.Token;
       Tail_Pos  : Positive;
+      Old_Store : constant Lisp.Store.Arena := RT.Store;
    begin
       pragma Assert (Lisp.Symbols.Valid (RT.Symbols));
       pragma Assert (Lisp.Store.Valid (RT.Store));
+      pragma Assert (Lisp.Env.Valid (RT.Env));
       Parse_Expr (Source, Cursor, RT, Tail, Tail_Pos, Error);
       if Error /= Lisp.Types.Error_None then
          Ref := Lisp.Types.No_Ref;
@@ -280,6 +320,8 @@ package body Lisp.Parser with SPARK_Mode is
          return;
       end if;
 
+      pragma Assert (Store_Refs_Preserved (Old_Store, RT.Store));
+      pragma Assert (Element_Prefix_Valid (RT, Elements, Count));
       if Tail_Pos > Source'Last then
          Ref := Lisp.Types.No_Ref;
          Next_Pos := Tail_Pos;
@@ -310,12 +352,15 @@ package body Lisp.Parser with SPARK_Mode is
    with
      Pre => Lisp.Symbols.Valid (RT.Symbols)
        and then Lisp.Store.Valid (RT.Store)
+       and then Lisp.Env.Valid (RT.Env)
        and then Source'First = 1
        and then Source'Last < Natural'Last
        and then Cursor in Source'Range,
      Post => Next_Pos in Cursor .. Source'Last + 1
        and then Lisp.Symbols.Valid (RT.Symbols)
        and then Lisp.Store.Valid (RT.Store)
+       and then Lisp.Env.Valid (RT.Env)
+       and then Store_Refs_Preserved (RT.Store'Old, RT.Store)
        and then
        (if Lisp.Types."=" (Error, Lisp.Types.Error_None) then
            Lisp.Store.Is_Valid_Ref (RT.Store, Ref)
@@ -326,6 +371,7 @@ package body Lisp.Parser with SPARK_Mode is
    begin
       pragma Assert (Lisp.Symbols.Valid (RT.Symbols));
       pragma Assert (Lisp.Store.Valid (RT.Store));
+      pragma Assert (Lisp.Env.Valid (RT.Env));
       Parse_Expr (Source, Cursor, RT, Tail_Ref, Next_Pos, Error);
       if Error /= Lisp.Types.Error_None then
          Ref := Lisp.Types.No_Ref;
@@ -357,12 +403,15 @@ package body Lisp.Parser with SPARK_Mode is
    with
      Pre => Lisp.Symbols.Valid (RT.Symbols)
        and then Lisp.Store.Valid (RT.Store)
+       and then Lisp.Env.Valid (RT.Env)
        and then Source'First = 1
        and then Pos in Source'Range
        and then Source'Last < Natural'Last,
      Post => Next_Pos in Pos .. Source'Last + 1
        and then Lisp.Symbols.Valid (RT.Symbols)
        and then Lisp.Store.Valid (RT.Store)
+       and then Lisp.Env.Valid (RT.Env)
+       and then Store_Refs_Preserved (RT.Store'Old, RT.Store)
        and then
        (if Lisp.Types."=" (Error, Lisp.Types.Error_None) then
            Lisp.Store.Is_Valid_Ref (RT.Store, Ref)
@@ -372,12 +421,16 @@ package body Lisp.Parser with SPARK_Mode is
       Cursor    : Positive := Pos;
       Elements  : Element_Buffer := (others => Lisp.Types.No_Ref);
       Count     : List_Element_Count := 0;
+      Old_Store : constant Lisp.Store.Arena := RT.Store;
    begin
       pragma Assert (Lisp.Symbols.Valid (RT.Symbols));
       pragma Assert (Lisp.Store.Valid (RT.Store));
+      pragma Assert (Lisp.Env.Valid (RT.Env));
       loop
          pragma Loop_Invariant (Lisp.Symbols.Valid (RT.Symbols));
          pragma Loop_Invariant (Lisp.Store.Valid (RT.Store));
+         pragma Loop_Invariant (Lisp.Env.Valid (RT.Env));
+         pragma Loop_Invariant (Store_Refs_Preserved (Old_Store, RT.Store));
          pragma Loop_Invariant (Element_Prefix_Valid (RT, Elements, Count));
          pragma Loop_Invariant (Cursor in Pos .. Source'Last + 1);
          if Cursor > Source'Last then
@@ -440,6 +493,7 @@ package body Lisp.Parser with SPARK_Mode is
    begin
       pragma Assert (Lisp.Symbols.Valid (RT.Symbols));
       pragma Assert (Lisp.Store.Valid (RT.Store));
+      pragma Assert (Lisp.Env.Valid (RT.Env));
       case Tok.Kind is
          when Lisp.Lexer.Tok_Integer
             | Lisp.Lexer.Tok_Nil
@@ -476,6 +530,7 @@ package body Lisp.Parser with SPARK_Mode is
       Tok       : Lisp.Lexer.Token;
       Cursor    : Positive := Pos;
    begin
+      pragma Assert (Lisp.Env.Valid (RT.Env));
       Scan_Token (Source, Pos, Tok, Cursor);
       pragma Assert (Cursor in Tok.First .. Source'Last + 1);
       Parse_Token_Expr (Source, Tok, Cursor, RT, Ref, Error);

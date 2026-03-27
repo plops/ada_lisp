@@ -30,7 +30,12 @@ package Lisp.Lexer with SPARK_Mode is
        and then Pos in Source'Range
        and then Source'Last < Natural'Last,
      Post => Next_Pos in Pos .. Source'Last + 1
+       and then Next_Pos in Item.First .. Source'Last + 1
        and then Item.First > 0
+       and then Item.First in Pos .. Source'Last + 1
        and then Item.Last in Item.First .. Source'Last + 1
-       and then (if Item.Kind /= Tok_EOF then Item.First in Source'Range);
+       and then
+       (if Item.Kind /= Tok_EOF then
+           Item.First in Pos .. Source'Last
+           and then Item.Last in Item.First .. Source'Last);
 end Lisp.Lexer;
