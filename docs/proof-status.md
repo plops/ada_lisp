@@ -14,14 +14,14 @@
 - `Lisp.Primitives`: intended contract and safety proof, current status core proof project clean
 - `Lisp.Eval`: intended fuel and contract proof, current status core proof project clean
 - `Lisp.Driver`: intended end-to-end SPARK proof, current status core proof project clean
-- `Lisp.Model`: intended ghost reference semantics for a closed quoted-data fragment, current status focused `gnatprove -P lisp_prove.gpr -u lisp-model.adb` clean on March 27, 2026; the model now proves literals and `(quote ...)` without delegating back to `Lisp.Eval`, but it does not yet cover `if`, `begin`, primitives, or allocation
-- `Proof.Refinement`: intended executable-vs-model refinement theorem, current status still scaffolded; focused `gnatprove -P lisp_prove.gpr -u proof-refinement.adb` is clean apart from expected warnings about the currently unreferenced scaffold procedure, and the full semantic theorem is still pending
+- `Lisp.Model`: intended ghost reference semantics for a closed pure fragment, current status full bounded `./scripts/prove-adacore.sh` clean on March 27, 2026; the model now proves literals, `(quote ...)`, and closed `if` expressions without delegating back to `Lisp.Eval`, but it does not yet cover `begin`, primitives, or allocation
+- `Proof.Refinement`: intended executable-vs-model refinement theorem, current status still scaffolded; full bounded `./scripts/prove-adacore.sh` is clean on March 27, 2026 apart from expected warnings about the currently unreferenced scaffold procedure and `Unreferenced` locals, and the full semantic theorem is still pending
 - `app/lisp-main.adb`: intentional non-SPARK wrapper
 
-Latest dedicated core-proof summary from `gnatprove -P lisp_prove.gpr`:
+Latest dedicated core-proof summary from `./scripts/prove-adacore.sh`:
 
-- status note: clean at `GNATPROVE_LEVEL=0`, `GNATPROVE_TIMEOUT=2`, `GNATPROVE_PROVER=all`, `GNATPROVE_JOBS=32` with the repo-local AdaCore toolchain on March 27, 2026
-- follow-up note: this turn reran focused proofs for `lisp-model.adb` and `proof-refinement.adb` plus `./scripts/test.sh`; a fresh full `./scripts/prove-adacore.sh` rerun was blocked by an existing repo proof lock held by another `prove.sh`/`gnatprove` session, so the repo-wide clean statement above still refers to the earlier March 27 full-gate run
+- status note: clean with the repo-local AdaCore toolchain on March 27, 2026 using the script defaults `GNATPROVE_LEVEL=0`, `GNATPROVE_TIMEOUT=1`, and `GNATPROVE_JOBS=0`
+- warnings note: expected non-failing warnings remain in `proof-refinement.adb`, `lisp-symbols.ads`, `lisp-env.ads`, `lisp-primitives.adb`, and `lisp-parser.adb`
 - notes: parser contract cleanup now carries token cursor bounds, store-ref preservation, and environment validity through nested parse helpers, and the runtime/test scaffolding is aligned to the current `Max_Fuel` budget; use focused `./scripts/prove.sh -u ...` runs for local iteration, then widen back out to `./scripts/prove-adacore.sh`
 
 Project split:

@@ -35,7 +35,8 @@ is
       Expr : Lisp.Types.Cell_Ref) return Boolean
    with
      Pre => Lisp.Runtime.Valid (RT)
-       and then (Expr = Lisp.Types.No_Ref or else Lisp.Store.Is_Valid_Ref (RT.Store, Expr));
+       and then (Expr = Lisp.Types.No_Ref or else Lisp.Store.Is_Valid_Ref (RT.Store, Expr)),
+     Subprogram_Variant => (Decreases => Expr);
 
    function Readable_Result
      (RT    : Lisp.Runtime.State;

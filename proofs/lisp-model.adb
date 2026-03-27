@@ -6,6 +6,9 @@ is
    use type Lisp.Types.Error_Code;
    use type Lisp.Types.Symbol_Id;
 
+   function Is_Truth (Ref : Lisp.Types.Cell_Ref) return Boolean is
+     (Ref /= Lisp.Store.Nil_Ref);
+
    function Quote_Args
      (S    : Lisp.Store.Arena;
       Args : Lisp.Types.Cell_Ref) return Boolean is
@@ -80,11 +83,69 @@ is
             begin
                pragma Assert (Head_Expr < Expr);
                pragma Assert (Args_Expr < Expr);
-               return Head_Expr /= Lisp.Types.No_Ref
-                 and then Args_Expr /= Lisp.Types.No_Ref
-                 and then Lisp.Store.Kind_Of (RT.Store, Head_Expr) = Lisp.Types.Symbol_Cell
-                 and then Lisp.Store.Symbol_Value (RT.Store, Head_Expr) = RT.Known.Quote_Id
-                 and then Quote_Args (RT.Store, Args_Expr);
+               if Head_Expr = Lisp.Types.No_Ref
+                 or else Args_Expr = Lisp.Types.No_Ref
+                 or else Lisp.Store.Kind_Of (RT.Store, Head_Expr) /= Lisp.Types.Symbol_Cell
+               then
+                  return False;
+               end if;
+
+               declare
+                  Name_Id : constant Lisp.Types.Symbol_Id :=
+                    Lisp.Store.Symbol_Value (RT.Store, Head_Expr);
+               begin
+                  if Name_Id = RT.Known.Quote_Id then
+                     return Quote_Args (RT.Store, Args_Expr);
+                  elsif Name_Id = RT.Known.If_Id then
+                     if Lisp.Store.Kind_Of (RT.Store, Args_Expr) /= Lisp.Types.Cons_Cell then
+                        return False;
+                     end if;
+
+                     declare
+                        Cond_Expr : constant Lisp.Types.Cell_Ref := Lisp.Store.Car (RT.Store, Args_Expr);
+                        Tail_1    : constant Lisp.Types.Cell_Ref := Lisp.Store.Cdr (RT.Store, Args_Expr);
+                     begin
+                        pragma Assert (Cond_Expr < Args_Expr);
+                        pragma Assert (Tail_1 < Args_Expr);
+                        if Cond_Expr = Lisp.Types.No_Ref
+                          or else Tail_1 = Lisp.Types.No_Ref
+                          or else Lisp.Store.Kind_Of (RT.Store, Tail_1) /= Lisp.Types.Cons_Cell
+                        then
+                           return False;
+                        end if;
+
+                        declare
+                           Then_Expr : constant Lisp.Types.Cell_Ref := Lisp.Store.Car (RT.Store, Tail_1);
+                           Tail_2    : constant Lisp.Types.Cell_Ref := Lisp.Store.Cdr (RT.Store, Tail_1);
+                        begin
+                           pragma Assert (Then_Expr < Tail_1);
+                           pragma Assert (Tail_2 < Tail_1);
+                           if Then_Expr = Lisp.Types.No_Ref
+                             or else Tail_2 = Lisp.Types.No_Ref
+                             or else Lisp.Store.Kind_Of (RT.Store, Tail_2) /= Lisp.Types.Cons_Cell
+                           then
+                              return False;
+                           end if;
+
+                           declare
+                              Else_Expr  : constant Lisp.Types.Cell_Ref := Lisp.Store.Car (RT.Store, Tail_2);
+                              Final_Tail : constant Lisp.Types.Cell_Ref := Lisp.Store.Cdr (RT.Store, Tail_2);
+                           begin
+                              pragma Assert (Else_Expr < Tail_2);
+                              pragma Assert (Final_Tail < Tail_2);
+                              return Else_Expr /= Lisp.Types.No_Ref
+                                and then Final_Tail /= Lisp.Types.No_Ref
+                                and then Final_Tail = Lisp.Store.Nil_Ref
+                                and then Pure_Subset_Expr (RT, Cond_Expr)
+                                and then Pure_Subset_Expr (RT, Then_Expr)
+                                and then Pure_Subset_Expr (RT, Else_Expr);
+                           end;
+                        end;
+                     end;
+                  else
+                     return False;
+                  end if;
+               end;
             end;
       end case;
    end Pure_Subset_Expr;
@@ -149,9 +210,14 @@ is
       Fuel          : in Lisp.Types.Fuel_Count;
       Result_Ref    : out Lisp.Types.Cell_Ref;
       Error         : out Lisp.Types.Error_Code) is
-      pragma Unreferenced (Current_Frame);
-      Head_Expr : Lisp.Types.Cell_Ref;
-      Args_Expr : Lisp.Types.Cell_Ref;
+      Head_Expr        : Lisp.Types.Cell_Ref;
+      Args_Expr        : Lisp.Types.Cell_Ref;
+      Cond_Expr        : Lisp.Types.Cell_Ref;
+      Then_Expr        : Lisp.Types.Cell_Ref;
+      Else_Expr        : Lisp.Types.Cell_Ref;
+      Tail_Expr        : Lisp.Types.Cell_Ref;
+      Condition_Result : Lisp.Types.Cell_Ref;
+      Condition_Error  : Lisp.Types.Error_Code;
    begin
       if Fuel = 0 then
          Result_Ref := Lisp.Types.No_Ref;
@@ -172,15 +238,100 @@ is
             if Head_Expr = Lisp.Types.No_Ref
               or else Args_Expr = Lisp.Types.No_Ref
               or else Lisp.Store.Kind_Of (RT.Store, Head_Expr) /= Lisp.Types.Symbol_Cell
-              or else Lisp.Store.Symbol_Value (RT.Store, Head_Expr) /= RT.Known.Quote_Id
-              or else not Quote_Args (RT.Store, Args_Expr)
             then
                Result_Ref := Lisp.Types.No_Ref;
                Error := Lisp.Types.Error_Type;
+            elsif Lisp.Store.Symbol_Value (RT.Store, Head_Expr) = RT.Known.Quote_Id then
+               if not Quote_Args (RT.Store, Args_Expr) then
+                  Result_Ref := Lisp.Types.No_Ref;
+                  Error := Lisp.Types.Error_Type;
+               else
+                  Result_Ref := Lisp.Store.Car (RT.Store, Args_Expr);
+                  Error := Lisp.Types.Error_None;
+                  pragma Assert (Pure_Data (RT.Store, Result_Ref));
+               end if;
+            elsif Lisp.Store.Symbol_Value (RT.Store, Head_Expr) = RT.Known.If_Id then
+               if Lisp.Store.Kind_Of (RT.Store, Args_Expr) /= Lisp.Types.Cons_Cell then
+                  Result_Ref := Lisp.Types.No_Ref;
+                  Error := Lisp.Types.Error_Type;
+                  return;
+               end if;
+
+               Cond_Expr := Lisp.Store.Car (RT.Store, Args_Expr);
+               Tail_Expr := Lisp.Store.Cdr (RT.Store, Args_Expr);
+               if Cond_Expr = Lisp.Types.No_Ref
+                 or else Tail_Expr = Lisp.Types.No_Ref
+                 or else Lisp.Store.Kind_Of (RT.Store, Tail_Expr) /= Lisp.Types.Cons_Cell
+               then
+                  Result_Ref := Lisp.Types.No_Ref;
+                  Error := Lisp.Types.Error_Type;
+                  return;
+               end if;
+
+               Then_Expr := Lisp.Store.Car (RT.Store, Tail_Expr);
+               Tail_Expr := Lisp.Store.Cdr (RT.Store, Tail_Expr);
+               if Then_Expr = Lisp.Types.No_Ref
+                 or else Tail_Expr = Lisp.Types.No_Ref
+                 or else Lisp.Store.Kind_Of (RT.Store, Tail_Expr) /= Lisp.Types.Cons_Cell
+               then
+                  Result_Ref := Lisp.Types.No_Ref;
+                  Error := Lisp.Types.Error_Type;
+                  return;
+               end if;
+
+               Else_Expr := Lisp.Store.Car (RT.Store, Tail_Expr);
+               Tail_Expr := Lisp.Store.Cdr (RT.Store, Tail_Expr);
+               if Else_Expr = Lisp.Types.No_Ref
+                 or else Tail_Expr = Lisp.Types.No_Ref
+                 or else Tail_Expr /= Lisp.Store.Nil_Ref
+               then
+                  Result_Ref := Lisp.Types.No_Ref;
+                  Error := Lisp.Types.Error_Type;
+                  return;
+               end if;
+
+               if not Pure_Subset_Expr (RT, Cond_Expr)
+                 or else not Pure_Subset_Expr (RT, Then_Expr)
+                 or else not Pure_Subset_Expr (RT, Else_Expr)
+               then
+                  Result_Ref := Lisp.Types.No_Ref;
+                  Error := Lisp.Types.Error_Type;
+                  return;
+               end if;
+
+               Eval_Pure_Closed
+                 (RT,
+                  Current_Frame,
+                  Cond_Expr,
+                  Fuel - 1,
+                  Condition_Result,
+                  Condition_Error);
+               if Condition_Error /= Lisp.Types.Error_None then
+                  Result_Ref := Lisp.Types.No_Ref;
+                  Error := Condition_Error;
+                  return;
+               end if;
+
+               if Is_Truth (Condition_Result) then
+                  Eval_Pure_Closed
+                    (RT,
+                     Current_Frame,
+                     Then_Expr,
+                     Fuel - 1,
+                     Result_Ref,
+                     Error);
+               else
+                  Eval_Pure_Closed
+                    (RT,
+                     Current_Frame,
+                     Else_Expr,
+                     Fuel - 1,
+                     Result_Ref,
+                     Error);
+               end if;
             else
-               Result_Ref := Lisp.Store.Car (RT.Store, Args_Expr);
-               Error := Lisp.Types.Error_None;
-               pragma Assert (Pure_Data (RT.Store, Result_Ref));
+               Result_Ref := Lisp.Types.No_Ref;
+               Error := Lisp.Types.Error_Type;
             end if;
          when Lisp.Types.Symbol_Cell
             | Lisp.Types.Primitive_Cell
