@@ -80,6 +80,8 @@ procedure Proof.Refinement with SPARK_Mode is
       if Model_Error = Lisp.Types.Error_None then
          pragma Assert (Lisp.Store.Is_Valid_Ref (Model_RT.Store, Model_Result));
          pragma Assert (Lisp.Model.Pure_Data (Model_RT.Store, Model_Result));
+         Lisp.Model.Prove_Pure_Data_Readable (Model_RT, Model_Result);
+         pragma Assert (Lisp.Model.Readable_Result (Model_RT, Model_Result));
       end if;
 
       if Exec_Error = Lisp.Types.Error_None then

@@ -19,6 +19,14 @@ is
      Pre => Lisp.Store.Valid (S)
        and then (Expr = Lisp.Types.No_Ref or else Lisp.Store.Is_Valid_Ref (S, Expr)),
      Post =>
+       (if Pure_Data'Result then
+           Expr /= Lisp.Types.No_Ref
+           and then Lisp.Store.Is_Valid_Ref (S, Expr)
+           and then Lisp.Store.Kind_Of (S, Expr) /= Lisp.Types.Primitive_Cell
+           and then Lisp.Store.Kind_Of (S, Expr) /= Lisp.Types.Closure_Cell
+        else
+           True)
+       and then
        (if Expr /= Lisp.Types.No_Ref
          and then Lisp.Store.Is_Valid_Ref (S, Expr)
          and then
@@ -27,8 +35,31 @@ is
           or else Lisp.Store.Kind_Of (S, Expr) = Lisp.Types.Integer_Cell
           or else Lisp.Store.Kind_Of (S, Expr) = Lisp.Types.Symbol_Cell)
         then
-           Pure_Data'Result),
+           Pure_Data'Result)
+       and then
+       (if Pure_Data'Result
+         and then Expr /= Lisp.Types.No_Ref
+         and then Lisp.Store.Is_Valid_Ref (S, Expr)
+         and then Lisp.Store.Kind_Of (S, Expr) = Lisp.Types.Cons_Cell
+        then
+           Lisp.Store.Car (S, Expr) /= Lisp.Types.No_Ref
+           and then Lisp.Store.Cdr (S, Expr) /= Lisp.Types.No_Ref
+           and then Pure_Data (S, Lisp.Store.Car (S, Expr))
+           and then Pure_Data (S, Lisp.Store.Cdr (S, Expr))
+        else
+           True),
      Subprogram_Variant => (Decreases => Expr);
+
+   procedure Prove_Pure_Data_Readable
+     (RT   : Lisp.Runtime.State;
+      Expr : Lisp.Types.Cell_Ref)
+   with
+     Ghost,
+     Pre =>
+       Lisp.Runtime.Valid (RT)
+       and then Lisp.Store.Is_Valid_Ref (RT.Store, Expr)
+       and then Pure_Data (RT.Store, Expr),
+     Post => Readable_Result (RT, Expr);
 
    function Pure_Subset_Expr
      (RT   : Lisp.Runtime.State;
@@ -40,7 +71,24 @@ is
 
    function Readable_Result
      (RT    : Lisp.Runtime.State;
-     Value : Lisp.Types.Cell_Ref) return Boolean
+      Value : Lisp.Types.Cell_Ref) return Boolean is
+     (Value /= Lisp.Types.No_Ref
+      and then Lisp.Store.Is_Valid_Ref (RT.Store, Value)
+      and then
+      (case Lisp.Store.Kind_Of (RT.Store, Value) is
+          when Lisp.Types.Nil_Cell
+             | Lisp.Types.True_Cell
+             | Lisp.Types.Integer_Cell
+             | Lisp.Types.Symbol_Cell =>
+             True,
+          when Lisp.Types.Primitive_Cell
+             | Lisp.Types.Closure_Cell =>
+             False,
+          when Lisp.Types.Cons_Cell =>
+             Lisp.Store.Car (RT.Store, Value) /= Lisp.Types.No_Ref
+             and then Lisp.Store.Cdr (RT.Store, Value) /= Lisp.Types.No_Ref
+             and then Readable_Result (RT, Lisp.Store.Car (RT.Store, Value))
+             and then Readable_Result (RT, Lisp.Store.Cdr (RT.Store, Value))))
    with
      Pre => Lisp.Runtime.Valid (RT)
        and then (Value = Lisp.Types.No_Ref or else Lisp.Store.Is_Valid_Ref (RT.Store, Value)),
@@ -51,12 +99,13 @@ is
            and then Lisp.Store.Kind_Of (RT.Store, Value) /= Lisp.Types.Closure_Cell
            and then
            (if Lisp.Store.Kind_Of (RT.Store, Value) = Lisp.Types.Cons_Cell then
-               Lisp.Store.Readable_Value (RT.Store, Lisp.Store.Car (RT.Store, Value))
-               and then Lisp.Store.Readable_Value (RT.Store, Lisp.Store.Cdr (RT.Store, Value))
+               Readable_Result (RT, Lisp.Store.Car (RT.Store, Value))
+               and then Readable_Result (RT, Lisp.Store.Cdr (RT.Store, Value))
             else
                True)
         else
-           True);
+           True),
+     Subprogram_Variant => (Decreases => Value);
 
    function Same_Readable_Value
      (Left_RT    : Lisp.Runtime.State;

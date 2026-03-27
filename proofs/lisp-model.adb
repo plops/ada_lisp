@@ -30,13 +30,6 @@ is
        and then (Forms = Lisp.Types.No_Ref or else Lisp.Store.Is_Valid_Ref (RT.Store, Forms)),
      Subprogram_Variant => (Decreases => Forms);
 
-   function Readable_Result
-     (RT    : Lisp.Runtime.State;
-      Value : Lisp.Types.Cell_Ref) return Boolean is
-   begin
-      return Lisp.Store.Readable_Value (RT.Store, Value);
-   end Readable_Result;
-
    function Pure_Data
      (S    : Lisp.Store.Arena;
       Expr : Lisp.Types.Cell_Ref) return Boolean is
@@ -66,6 +59,39 @@ is
             end;
       end case;
    end Pure_Data;
+
+   procedure Prove_Pure_Data_Readable
+     (RT   : Lisp.Runtime.State;
+      Expr : Lisp.Types.Cell_Ref) is
+   begin
+      case Lisp.Store.Kind_Of (RT.Store, Expr) is
+         when Lisp.Types.Nil_Cell
+            | Lisp.Types.True_Cell
+            | Lisp.Types.Integer_Cell
+            | Lisp.Types.Symbol_Cell =>
+            pragma Assert (Readable_Result (RT, Expr));
+         when Lisp.Types.Cons_Cell =>
+            declare
+               Left_Expr  : constant Lisp.Types.Cell_Ref := Lisp.Store.Car (RT.Store, Expr);
+               Right_Expr : constant Lisp.Types.Cell_Ref := Lisp.Store.Cdr (RT.Store, Expr);
+            begin
+               pragma Assert (Left_Expr < Expr);
+               pragma Assert (Right_Expr < Expr);
+               pragma Assert (Lisp.Store.Is_Valid_Ref (RT.Store, Left_Expr));
+               pragma Assert (Lisp.Store.Is_Valid_Ref (RT.Store, Right_Expr));
+               pragma Assert (Pure_Data (RT.Store, Left_Expr));
+               pragma Assert (Pure_Data (RT.Store, Right_Expr));
+               Prove_Pure_Data_Readable (RT, Left_Expr);
+               Prove_Pure_Data_Readable (RT, Right_Expr);
+               pragma Assert (Readable_Result (RT, Left_Expr));
+               pragma Assert (Readable_Result (RT, Right_Expr));
+               pragma Assert (Readable_Result (RT, Expr));
+            end;
+         when Lisp.Types.Primitive_Cell
+            | Lisp.Types.Closure_Cell =>
+            null;
+      end case;
+   end Prove_Pure_Data_Readable;
 
    function Pure_Subset_Expr
      (RT   : Lisp.Runtime.State;
