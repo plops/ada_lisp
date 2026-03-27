@@ -307,5 +307,44 @@ package Lisp.Runtime with SPARK_Mode is
            If_Immediate_Result'Result =
              Immediate_Result (RT, If_Form_Else (RT, Expr)));
 
+   function Begin_Single_Immediate_Result_Form
+     (RT   : State;
+      Expr : Lisp.Types.Cell_Ref) return Boolean
+   with
+     Pre => Valid (RT)
+       and then Lisp.Store.Is_Valid_Ref (RT.Store, Expr),
+     Post =>
+       (if Begin_Single_Immediate_Result_Form'Result
+        then
+           Lisp.Store.Kind_Of (RT.Store, Expr) = Lisp.Types.Cons_Cell
+           and then Lisp.Store.Car (RT.Store, Expr) /= Lisp.Types.No_Ref
+           and then Lisp.Store.Cdr (RT.Store, Expr) /= Lisp.Types.No_Ref
+           and then
+           Lisp.Store.Kind_Of (RT.Store, Lisp.Store.Car (RT.Store, Expr)) =
+             Lisp.Types.Symbol_Cell
+           and then
+           Lisp.Store.Symbol_Value (RT.Store, Lisp.Store.Car (RT.Store, Expr)) =
+             RT.Known.Begin_Id
+           and then
+           Single_Argument_List (RT.Store, Lisp.Store.Cdr (RT.Store, Expr))
+           and then
+           Immediate_Result_Form
+             (RT, Lisp.Store.Car (RT.Store, Lisp.Store.Cdr (RT.Store, Expr)))
+        else
+           True);
+
+   function Begin_Single_Immediate_Result
+     (RT   : State;
+      Expr : Lisp.Types.Cell_Ref) return Lisp.Types.Cell_Ref
+   with
+     Pre => Valid (RT)
+       and then Lisp.Store.Is_Valid_Ref (RT.Store, Expr)
+       and then Begin_Single_Immediate_Result_Form (RT, Expr),
+     Post =>
+       Lisp.Store.Is_Valid_Ref (RT.Store, Begin_Single_Immediate_Result'Result)
+       and then
+       Begin_Single_Immediate_Result'Result =
+         Immediate_Result (RT, Lisp.Store.Car (RT.Store, Lisp.Store.Cdr (RT.Store, Expr)));
+
    function Is_Reserved (RT : State; Name : Lisp.Types.Symbol_Id) return Boolean;
 end Lisp.Runtime;

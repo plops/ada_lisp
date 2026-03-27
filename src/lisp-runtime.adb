@@ -316,6 +316,34 @@ package body Lisp.Runtime with SPARK_Mode is
       end if;
    end If_Immediate_Result;
 
+   function Begin_Single_Immediate_Result_Form
+     (RT   : State;
+      Expr : Lisp.Types.Cell_Ref) return Boolean is
+      Head_Expr : Lisp.Types.Cell_Ref;
+      Args_Expr : Lisp.Types.Cell_Ref;
+   begin
+      if Lisp.Store.Kind_Of (RT.Store, Expr) /= Lisp.Types.Cons_Cell then
+         return False;
+      end if;
+
+      Head_Expr := Lisp.Store.Car (RT.Store, Expr);
+      Args_Expr := Lisp.Store.Cdr (RT.Store, Expr);
+      return Head_Expr /= Lisp.Types.No_Ref
+        and then Args_Expr /= Lisp.Types.No_Ref
+        and then Lisp.Store.Kind_Of (RT.Store, Head_Expr) = Lisp.Types.Symbol_Cell
+        and then Lisp.Store.Symbol_Value (RT.Store, Head_Expr) = RT.Known.Begin_Id
+        and then Single_Argument_List (RT.Store, Args_Expr)
+        and then Immediate_Result_Form (RT, Lisp.Store.Car (RT.Store, Args_Expr));
+   end Begin_Single_Immediate_Result_Form;
+
+   function Begin_Single_Immediate_Result
+     (RT   : State;
+      Expr : Lisp.Types.Cell_Ref) return Lisp.Types.Cell_Ref is
+      Args_Expr : constant Lisp.Types.Cell_Ref := Lisp.Store.Cdr (RT.Store, Expr);
+   begin
+      return Immediate_Result (RT, Lisp.Store.Car (RT.Store, Args_Expr));
+   end Begin_Single_Immediate_Result;
+
    function Is_Reserved (RT : State; Name : Lisp.Types.Symbol_Id) return Boolean is
      (Name = RT.Known.Quote_Id
       or else Name = RT.Known.If_Id
