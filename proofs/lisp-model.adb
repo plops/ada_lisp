@@ -28,6 +28,19 @@ is
    with
      Pre => Lisp.Runtime.Valid (RT)
        and then (Forms = Lisp.Types.No_Ref or else Lisp.Store.Is_Valid_Ref (RT.Store, Forms)),
+     Post =>
+       (if Pure_Subset_Forms'Result
+         and then Forms /= Lisp.Store.Nil_Ref
+        then
+           Forms /= Lisp.Types.No_Ref
+           and then Lisp.Store.Is_Valid_Ref (RT.Store, Forms)
+           and then Lisp.Store.Kind_Of (RT.Store, Forms) = Lisp.Types.Cons_Cell
+           and then Lisp.Store.Car (RT.Store, Forms) /= Lisp.Types.No_Ref
+           and then Lisp.Store.Cdr (RT.Store, Forms) /= Lisp.Types.No_Ref
+           and then Pure_Subset_Expr (RT, Lisp.Store.Car (RT.Store, Forms))
+           and then Pure_Subset_Forms (RT, Lisp.Store.Cdr (RT.Store, Forms))
+        else
+           True),
      Subprogram_Variant => (Decreases => Forms);
 
    function Pure_Data
@@ -524,11 +537,37 @@ is
                end if;
             elsif Lisp.Store.Symbol_Value (RT.Store, Head_Expr) = RT.Known.Begin_Id then
                pragma Assert (not Lisp.Runtime.If_Immediate_Result_Form (RT, Expr));
+               if Fuel > 2
+                 and then RT.Known.Begin_Id /= RT.Known.Quote_Id
+                 and then RT.Known.Begin_Id /= RT.Known.If_Id
+                 and then Lisp.Runtime.Begin_Single_Immediate_Result_Form (RT, Expr)
+               then
+                  Form_Expr := Lisp.Store.Car (RT.Store, Args_Expr);
+                  pragma Assert (Lisp.Runtime.Single_Argument_List (RT.Store, Args_Expr));
+                  pragma Assert (Form_Expr = Lisp.Store.Car (RT.Store, Args_Expr));
+                  pragma Assert (Pure_Subset_Expr (RT, Form_Expr));
+                  pragma Assert (Lisp.Runtime.Immediate_Result_Form (RT, Form_Expr));
+                  pragma Assert (Fuel - 2 > 0);
+                  Eval_Pure_Closed
+                    (RT,
+                     Current_Frame,
+                     Form_Expr,
+                     Fuel - 2,
+                     Result_Ref,
+                     Error);
+                  pragma Assert (Error = Lisp.Types.Error_None);
+                  pragma Assert (Result_Ref = Lisp.Runtime.Immediate_Result (RT, Form_Expr));
+                  pragma Assert
+                    (Result_Ref = Lisp.Runtime.Begin_Single_Immediate_Result (RT, Expr));
+                  return;
+               end if;
+
                if not Pure_Subset_Forms (RT, Args_Expr) then
                   Result_Ref := Lisp.Types.No_Ref;
                   Error := Lisp.Types.Error_Type;
                   return;
                end if;
+               pragma Assert (Pure_Subset_Forms (RT, Args_Expr));
 
                if Args_Expr = Lisp.Store.Nil_Ref then
                   Result_Ref := Lisp.Store.Nil_Ref;

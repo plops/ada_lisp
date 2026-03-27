@@ -100,6 +100,51 @@ procedure Proof.Refinement with SPARK_Mode is
       pragma Assert (Model_Result = Exec_Result);
    end Prove_If_Immediate_Form_Refines;
 
+   procedure Prove_Begin_Single_Immediate_Form_Refines
+     (Initial_RT : Lisp.Runtime.State;
+      Expr       : Lisp.Types.Cell_Ref)
+   with
+     Ghost,
+     Pre =>
+       Lisp.Runtime.Valid (Initial_RT)
+       and then Lisp.Env.Frame_Valid (Initial_RT.Env, Lisp.Env.Global_Frame)
+       and then Lisp.Store.Is_Valid_Ref (Initial_RT.Store, Expr)
+       and then Lisp.Model.Pure_Subset_Expr (Initial_RT, Expr)
+       and then Initial_RT.Known.Begin_Id /= Initial_RT.Known.Quote_Id
+       and then Initial_RT.Known.Begin_Id /= Initial_RT.Known.If_Id
+       and then Lisp.Runtime.Begin_Single_Immediate_Result_Form (Initial_RT, Expr)
+   is
+      Model_RT     : Lisp.Runtime.State := Initial_RT;
+      Model_Result : Lisp.Types.Cell_Ref;
+      Exec_Result  : Lisp.Types.Cell_Ref;
+      Model_Error  : Lisp.Types.Error_Code;
+      Exec_Error   : Lisp.Types.Error_Code;
+   begin
+      Lisp.Model.Eval_Pure_Closed
+        (Model_RT,
+         Lisp.Env.Global_Frame,
+         Expr,
+         Lisp.Config.Max_Fuel,
+         Model_Result,
+         Model_Error);
+      Lisp.Eval.Prove_Begin_Single_Immediate_Eval
+        (Initial_RT,
+         Lisp.Env.Global_Frame,
+         Expr,
+         Lisp.Config.Max_Fuel,
+         Exec_Result,
+         Exec_Error);
+
+      pragma Assert (Model_Error = Lisp.Types.Error_None);
+      pragma Assert (Exec_Error = Lisp.Types.Error_None);
+
+      pragma Assert
+        (Model_Result = Lisp.Runtime.Begin_Single_Immediate_Result (Initial_RT, Expr));
+      pragma Assert
+        (Exec_Result = Lisp.Runtime.Begin_Single_Immediate_Result (Initial_RT, Expr));
+      pragma Assert (Model_Result = Exec_Result);
+   end Prove_Begin_Single_Immediate_Form_Refines;
+
    procedure Readable_Result_Refines_Model
      (Source : String)
    with
@@ -159,6 +204,16 @@ procedure Proof.Refinement with SPARK_Mode is
 
       if Lisp.Runtime.If_Immediate_Result_Form (Initial_RT, Initial_Expr) then
          Prove_If_Immediate_Form_Refines (Initial_RT, Initial_Expr);
+         return;
+      end if;
+
+      if Initial_RT.Known.Begin_Id /= Initial_RT.Known.Quote_Id
+        and then Initial_RT.Known.Begin_Id /= Initial_RT.Known.If_Id
+        and then
+          Lisp.Runtime.Begin_Single_Immediate_Result_Form
+            (Initial_RT, Initial_Expr)
+      then
+         Prove_Begin_Single_Immediate_Form_Refines (Initial_RT, Initial_Expr);
          return;
       end if;
 
