@@ -22,6 +22,14 @@ is
      Pre => Lisp.Store.Valid (S)
        and then (Args = Lisp.Types.No_Ref or else Lisp.Store.Is_Valid_Ref (S, Args));
 
+   function Pure_Subset_Forms
+     (RT    : Lisp.Runtime.State;
+      Forms : Lisp.Types.Cell_Ref) return Boolean
+   with
+     Pre => Lisp.Runtime.Valid (RT)
+       and then (Forms = Lisp.Types.No_Ref or else Lisp.Store.Is_Valid_Ref (RT.Store, Forms)),
+     Subprogram_Variant => (Decreases => Forms);
+
    function Readable_Result
      (RT    : Lisp.Runtime.State;
       Value : Lisp.Types.Cell_Ref) return Boolean is
@@ -142,6 +150,8 @@ is
                            end;
                         end;
                      end;
+                  elsif Name_Id = RT.Known.Begin_Id then
+                     return Pure_Subset_Forms (RT, Args_Expr);
                   else
                      return False;
                   end if;
@@ -149,6 +159,34 @@ is
             end;
       end case;
    end Pure_Subset_Expr;
+
+   function Pure_Subset_Forms
+     (RT    : Lisp.Runtime.State;
+      Forms : Lisp.Types.Cell_Ref) return Boolean is
+   begin
+      if Forms = Lisp.Store.Nil_Ref then
+         return True;
+      end if;
+
+      if Forms = Lisp.Types.No_Ref
+        or else not Lisp.Store.Is_Valid_Ref (RT.Store, Forms)
+        or else Lisp.Store.Kind_Of (RT.Store, Forms) /= Lisp.Types.Cons_Cell
+      then
+         return False;
+      end if;
+
+      declare
+         Form_Ref : constant Lisp.Types.Cell_Ref := Lisp.Store.Car (RT.Store, Forms);
+         Tail_Ref : constant Lisp.Types.Cell_Ref := Lisp.Store.Cdr (RT.Store, Forms);
+      begin
+         pragma Assert (Form_Ref < Forms);
+         pragma Assert (Tail_Ref < Forms);
+         return Form_Ref /= Lisp.Types.No_Ref
+           and then Tail_Ref /= Lisp.Types.No_Ref
+           and then Pure_Subset_Expr (RT, Form_Ref)
+           and then Pure_Subset_Forms (RT, Tail_Ref);
+      end;
+   end Pure_Subset_Forms;
 
    function Same_Readable_Value
      (Left_RT    : Lisp.Runtime.State;
@@ -216,6 +254,7 @@ is
       Then_Expr        : Lisp.Types.Cell_Ref;
       Else_Expr        : Lisp.Types.Cell_Ref;
       Tail_Expr        : Lisp.Types.Cell_Ref;
+      Form_Expr        : Lisp.Types.Cell_Ref;
       Condition_Result : Lisp.Types.Cell_Ref;
       Condition_Error  : Lisp.Types.Error_Code;
    begin
@@ -329,6 +368,65 @@ is
                      Result_Ref,
                      Error);
                end if;
+            elsif Lisp.Store.Symbol_Value (RT.Store, Head_Expr) = RT.Known.Begin_Id then
+               if not Pure_Subset_Forms (RT, Args_Expr) then
+                  Result_Ref := Lisp.Types.No_Ref;
+                  Error := Lisp.Types.Error_Type;
+                  return;
+               end if;
+
+               if Args_Expr = Lisp.Store.Nil_Ref then
+                  Result_Ref := Lisp.Store.Nil_Ref;
+                  Error := Lisp.Types.Error_None;
+                  pragma Assert (Pure_Data (RT.Store, Result_Ref));
+                  return;
+               end if;
+
+               if Fuel = 1 then
+                  Result_Ref := Lisp.Types.No_Ref;
+                  Error := Lisp.Types.Error_Out_Of_Fuel;
+                  return;
+               end if;
+
+               Result_Ref := Lisp.Store.Nil_Ref;
+               Error := Lisp.Types.Error_None;
+               Tail_Expr := Args_Expr;
+               while Tail_Expr /= Lisp.Store.Nil_Ref loop
+                  pragma Loop_Invariant (Lisp.Runtime.Valid (RT));
+                  pragma Loop_Invariant (Lisp.Env.Frame_Valid (RT.Env, Current_Frame));
+                  pragma Loop_Invariant (Lisp.Store.Is_Valid_Ref (RT.Store, Tail_Expr));
+                  pragma Loop_Invariant (Pure_Data (RT.Store, Result_Ref));
+                  pragma Loop_Invariant (Error = Lisp.Types.Error_None);
+                  pragma Loop_Invariant (Fuel > 1);
+
+                  if Lisp.Store.Kind_Of (RT.Store, Tail_Expr) /= Lisp.Types.Cons_Cell then
+                     Result_Ref := Lisp.Types.No_Ref;
+                     Error := Lisp.Types.Error_Type;
+                     return;
+                  end if;
+                  Form_Expr := Lisp.Store.Car (RT.Store, Tail_Expr);
+                  Tail_Expr := Lisp.Store.Cdr (RT.Store, Tail_Expr);
+                  if Form_Expr = Lisp.Types.No_Ref
+                    or else Tail_Expr = Lisp.Types.No_Ref
+                    or else not Pure_Subset_Expr (RT, Form_Expr)
+                  then
+                     Result_Ref := Lisp.Types.No_Ref;
+                     Error := Lisp.Types.Error_Type;
+                     return;
+                  end if;
+
+                  Eval_Pure_Closed
+                    (RT,
+                     Current_Frame,
+                     Form_Expr,
+                     Fuel - 2,
+                     Result_Ref,
+                     Error);
+                  if Error /= Lisp.Types.Error_None then
+                     Result_Ref := Lisp.Types.No_Ref;
+                     return;
+                  end if;
+               end loop;
             else
                Result_Ref := Lisp.Types.No_Ref;
                Error := Lisp.Types.Error_Type;

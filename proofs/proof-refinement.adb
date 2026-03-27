@@ -25,8 +25,6 @@ procedure Proof.Refinement with SPARK_Mode is
       Model_Error  : Lisp.Types.Error_Code;
       Exec_Error   : Lisp.Types.Error_Code;
    begin
-      pragma Unreferenced (Model_Result, Exec_Result);
-
       if Source'Length = 0
         or else Source'First /= 1
         or else Source'Last >= Natural'Last
@@ -78,6 +76,15 @@ procedure Proof.Refinement with SPARK_Mode is
          Lisp.Config.Max_Fuel,
          Exec_Result,
          Exec_Error);
+
+      if Model_Error = Lisp.Types.Error_None then
+         pragma Assert (Lisp.Store.Is_Valid_Ref (Model_RT.Store, Model_Result));
+         pragma Assert (Lisp.Model.Pure_Data (Model_RT.Store, Model_Result));
+      end if;
+
+      if Exec_Error = Lisp.Types.Error_None then
+         pragma Assert (Lisp.Store.Is_Valid_Ref (Exec_RT.Store, Exec_Result));
+      end if;
    end Readable_Result_Refines_Model;
 begin
    null;

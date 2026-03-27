@@ -14,8 +14,8 @@
 - `Lisp.Primitives`: intended contract and safety proof, current status core proof project clean
 - `Lisp.Eval`: intended fuel and contract proof, current status core proof project clean
 - `Lisp.Driver`: intended end-to-end SPARK proof, current status core proof project clean
-- `Lisp.Model`: intended ghost reference semantics for a closed pure fragment, current status full bounded `./scripts/prove-adacore.sh` clean on March 27, 2026; the model now proves literals, `(quote ...)`, and closed `if` expressions without delegating back to `Lisp.Eval`, but it does not yet cover `begin`, primitives, or allocation
-- `Proof.Refinement`: intended executable-vs-model refinement theorem, current status still scaffolded; full bounded `./scripts/prove-adacore.sh` is clean on March 27, 2026 apart from expected warnings about the currently unreferenced scaffold procedure and `Unreferenced` locals, and the full semantic theorem is still pending
+- `Lisp.Model`: intended ghost reference semantics for a closed pure fragment, current status full bounded `./scripts/prove-adacore.sh` clean on March 27, 2026; the model now proves literals, `(quote ...)`, closed `if`, and closed `begin` expressions without delegating back to `Lisp.Eval`, but it does not yet cover primitives or allocation
+- `Proof.Refinement`: intended executable-vs-model refinement theorem, current status still scaffolded; full bounded `./scripts/prove-adacore.sh` is clean on March 27, 2026 apart from the expected warning about the currently unreferenced scaffold procedure, and the full semantic theorem is still pending
 - `app/lisp-main.adb`: intentional non-SPARK wrapper
 
 Latest dedicated core-proof summary from `./scripts/prove-adacore.sh`:
