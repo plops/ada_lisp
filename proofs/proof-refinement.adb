@@ -33,20 +33,18 @@ procedure Proof.Refinement with SPARK_Mode is
       end if;
 
       Lisp.Runtime.Initialize (Model_RT, Model_Error);
-      Lisp.Runtime.Initialize (Exec_RT, Exec_Error);
-      if Model_Error /= Lisp.Types.Error_None
-        or else Exec_Error /= Lisp.Types.Error_None
-      then
+      if Model_Error /= Lisp.Types.Error_None then
          return;
       end if;
 
       Lisp.Parser.Parse_One (Source, 1, Model_RT, Model_Expr, Next_Pos, Model_Error);
-      Lisp.Parser.Parse_One (Source, 1, Exec_RT, Exec_Expr, Next_Pos, Exec_Error);
-      if Model_Error /= Lisp.Types.Error_None
-        or else Exec_Error /= Lisp.Types.Error_None
-      then
+      if Model_Error /= Lisp.Types.Error_None then
          return;
       end if;
+
+      Exec_RT := Model_RT;
+      Exec_Expr := Model_Expr;
+      Exec_Error := Lisp.Types.Error_None;
 
       if not Lisp.Runtime.Valid (Model_RT)
         or else not Lisp.Runtime.Valid (Exec_RT)
@@ -87,6 +85,7 @@ procedure Proof.Refinement with SPARK_Mode is
       if Exec_Error = Lisp.Types.Error_None then
          pragma Assert (Lisp.Store.Is_Valid_Ref (Exec_RT.Store, Exec_Result));
       end if;
+
    end Readable_Result_Refines_Model;
 begin
    null;
