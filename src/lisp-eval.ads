@@ -4,6 +4,8 @@ with Lisp.Store;
 with Lisp.Types;
 
 package Lisp.Eval with SPARK_Mode is
+   use type Lisp.Types.Cell_Kind;
+
    procedure Eval
      (RT            : in out Lisp.Runtime.State;
       Current_Frame : in Lisp.Types.Frame_Id;
@@ -22,6 +24,17 @@ package Lisp.Eval with SPARK_Mode is
        (if Lisp.Types."=" (Error, Lisp.Types.Error_None) then
            Lisp.Store.Is_Valid_Ref (RT.Store, Result_Ref)
         else
-           Result_Ref = Lisp.Types.No_Ref),
+           Result_Ref = Lisp.Types.No_Ref)
+       and then
+       (if Fuel > 0
+         and then
+         (Lisp.Store.Kind_Of (RT.Store'Old, Expr) = Lisp.Types.Nil_Cell
+          or else Lisp.Store.Kind_Of (RT.Store'Old, Expr) = Lisp.Types.True_Cell
+          or else Lisp.Store.Kind_Of (RT.Store'Old, Expr) = Lisp.Types.Integer_Cell)
+        then
+           Lisp.Types."=" (Error, Lisp.Types.Error_None)
+           and then Result_Ref = Expr
+        else
+           True),
      Subprogram_Variant => (Decreases => Fuel);
 end Lisp.Eval;

@@ -146,5 +146,16 @@ is
            Lisp.Store.Is_Valid_Ref (RT.Store, Result_Ref)
            and then Pure_Data (RT.Store, Result_Ref)
         else
-           Result_Ref = Lisp.Types.No_Ref);
+           Result_Ref = Lisp.Types.No_Ref)
+       and then
+       (if Fuel > 0
+         and then
+         (Lisp.Store.Kind_Of (RT.Store, Expr) = Lisp.Types.Nil_Cell
+          or else Lisp.Store.Kind_Of (RT.Store, Expr) = Lisp.Types.True_Cell
+          or else Lisp.Store.Kind_Of (RT.Store, Expr) = Lisp.Types.Integer_Cell)
+        then
+           Lisp.Types."=" (Error, Lisp.Types.Error_None)
+           and then Result_Ref = Expr
+        else
+           True);
 end Lisp.Model;

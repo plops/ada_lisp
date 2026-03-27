@@ -12,10 +12,10 @@
 - `Lisp.Parser`: intended runtime preservation proof, current status core proof project clean
 - `Lisp.Printer`: intended canonical output proof, current status core proof project clean
 - `Lisp.Primitives`: intended contract and safety proof, current status core proof project clean
-- `Lisp.Eval`: intended fuel and contract proof, current status core proof project clean
+- `Lisp.Eval`: intended fuel and contract proof, current status core proof project clean, including a bounded postcondition for literal atoms on positive fuel
 - `Lisp.Driver`: intended end-to-end SPARK proof, current status core proof project clean
 - `Lisp.Model`: intended ghost reference semantics for a closed pure fragment, current status focused `GNATPROVE_LEVEL=0 GNATPROVE_TIMEOUT=1 ./scripts/prove-adacore.sh -u lisp-model.adb` clean on March 27, 2026; the model now proves literals, `(quote ...)`, closed `if`, and closed `begin` expressions, and the proof layer now carries an explicit local readability predicate plus a ghost lemma showing pure model values satisfy it, but the model still does not cover primitives or allocation
-- `Proof.Refinement`: intended executable-vs-model refinement theorem, current status still scaffolded; focused `GNATPROVE_LEVEL=0 GNATPROVE_TIMEOUT=1 ./scripts/prove-adacore.sh -u proof-refinement.adb` is clean on March 27, 2026 apart from the expected warning about the currently unreferenced scaffold procedure, and the scaffold now evaluates the model and executable from the same successfully parsed term and copied initial runtime state while still proving that successful model evaluation on the closed pure fragment produces a locally readable result; the full semantic theorem is still pending
+- `Proof.Refinement`: intended executable-vs-model refinement theorem, current status still scaffolded; focused `GNATPROVE_LEVEL=0 GNATPROVE_TIMEOUT=1 ./scripts/prove-adacore.sh -u proof-refinement.adb` is clean on March 27, 2026 apart from the expected warning about the currently unreferenced scaffold procedure, and the scaffold now evaluates the model and executable from the same successfully parsed term and copied initial runtime state, proves local readability for successful model results on the closed pure fragment, and now also proves direct model/executable result equality for literal atoms in that shared-state setup; the full semantic theorem is still pending
 - `app/lisp-main.adb`: intentional non-SPARK wrapper
 
 Latest dedicated core-proof summary from `./scripts/prove-adacore.sh`:

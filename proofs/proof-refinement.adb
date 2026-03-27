@@ -86,6 +86,22 @@ procedure Proof.Refinement with SPARK_Mode is
          pragma Assert (Lisp.Store.Is_Valid_Ref (Exec_RT.Store, Exec_Result));
       end if;
 
+      if Model_Error = Lisp.Types.Error_None
+        and then Exec_Error = Lisp.Types.Error_None
+      then
+         case Lisp.Store.Kind_Of (Model_RT.Store, Model_Expr) is
+            when Lisp.Types.Nil_Cell
+               | Lisp.Types.True_Cell
+               | Lisp.Types.Integer_Cell =>
+               pragma Assert (Model_Result = Model_Expr);
+               pragma Assert (Exec_Result = Exec_Expr);
+               pragma Assert (Model_Expr = Exec_Expr);
+               pragma Assert (Model_Result = Exec_Result);
+            when others =>
+               null;
+         end case;
+      end if;
+
    end Readable_Result_Refines_Model;
 begin
    null;
