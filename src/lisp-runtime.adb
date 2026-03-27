@@ -229,6 +229,27 @@ package body Lisp.Runtime with SPARK_Mode is
       end if;
    end Immediate_Result;
 
+   function If_Immediate_Result_Form
+     (RT   : State;
+      Expr : Lisp.Types.Cell_Ref) return Boolean is
+   begin
+      return If_Form (RT, Expr)
+        and then Immediate_Result_Form (RT, If_Form_Cond (RT, Expr))
+        and then Immediate_Result_Form (RT, If_Form_Then (RT, Expr))
+        and then Immediate_Result_Form (RT, If_Form_Else (RT, Expr));
+   end If_Immediate_Result_Form;
+
+   function If_Immediate_Result
+     (RT   : State;
+      Expr : Lisp.Types.Cell_Ref) return Lisp.Types.Cell_Ref is
+   begin
+      if Immediate_Result (RT, If_Form_Cond (RT, Expr)) /= Lisp.Store.Nil_Ref then
+         return Immediate_Result (RT, If_Form_Then (RT, Expr));
+      else
+         return Immediate_Result (RT, If_Form_Else (RT, Expr));
+      end if;
+   end If_Immediate_Result;
+
    function Is_Reserved (RT : State; Name : Lisp.Types.Symbol_Id) return Boolean is
      (Name = RT.Known.Quote_Id
       or else Name = RT.Known.If_Id

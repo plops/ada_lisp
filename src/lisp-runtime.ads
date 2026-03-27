@@ -236,5 +236,42 @@ package Lisp.Runtime with SPARK_Mode is
            and then
            Immediate_Result'Result = Lisp.Runtime.Quote_Form_Result (RT, Expr));
 
+   function If_Immediate_Result_Form
+     (RT   : State;
+      Expr : Lisp.Types.Cell_Ref) return Boolean
+   with
+     Pre => Valid (RT)
+       and then Lisp.Store.Is_Valid_Ref (RT.Store, Expr),
+     Post =>
+       (if If_Immediate_Result_Form'Result
+        then
+           If_Form (RT, Expr)
+           and then
+           Immediate_Result_Form (RT, If_Form_Cond (RT, Expr))
+           and then
+           Immediate_Result_Form (RT, If_Form_Then (RT, Expr))
+           and then
+           Immediate_Result_Form (RT, If_Form_Else (RT, Expr))
+        else
+           True);
+
+   function If_Immediate_Result
+     (RT   : State;
+      Expr : Lisp.Types.Cell_Ref) return Lisp.Types.Cell_Ref
+   with
+     Pre => Valid (RT)
+       and then Lisp.Store.Is_Valid_Ref (RT.Store, Expr)
+       and then If_Immediate_Result_Form (RT, Expr),
+     Post =>
+       Lisp.Store.Is_Valid_Ref (RT.Store, If_Immediate_Result'Result)
+       and then
+       (if Immediate_Result (RT, If_Form_Cond (RT, Expr)) /= Lisp.Store.Nil_Ref
+        then
+           If_Immediate_Result'Result =
+             Immediate_Result (RT, If_Form_Then (RT, Expr))
+        else
+           If_Immediate_Result'Result =
+             Immediate_Result (RT, If_Form_Else (RT, Expr)));
+
    function Is_Reserved (RT : State; Name : Lisp.Types.Symbol_Id) return Boolean;
 end Lisp.Runtime;
